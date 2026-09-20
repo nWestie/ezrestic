@@ -1,0 +1,59 @@
+[
+    {
+        "time": "2026-09-19T22:34:44.8404992-04:00",
+        "tree": "8214655b36782d6c38e33408fb7709602c9707b7f501d6ff9d72628be70f8d49",
+        "paths": [
+            "C:\\Users\\westn\\Documents\\code\\ezRestic\\test_json"
+        ],
+        "hostname": "nwest",
+        "username": "NWEST\\westn",
+        "program_version": "restic 0.18.1",
+        "summary": {
+            "backup_start": "2026-09-19T22:34:44.8404992-04:00",
+            "backup_end": "2026-09-19T22:34:45.6040067-04:00",
+            "files_new": 1,
+            "files_changed": 0,
+            "files_unmodified": 0,
+            "dirs_new": 1,
+            "dirs_changed": 0,
+            "dirs_unmodified": 0,
+            "data_blobs": 1,
+            "tree_blobs": 2,
+            "data_added": 2172,
+            "data_added_packed": 1432,
+            "total_files_processed": 1,
+            "total_bytes_processed": 809
+        },
+        "id": "a5a69b278f38b5ffa6a9486ee37cec3a0119cd1bae6e79f3d5fe693590d03310",
+        "short_id": "a5a69b27"
+    },
+    {
+        "time": "2026-09-19T22:35:08.927609-04:00",
+        "parent": "a5a69b278f38b5ffa6a9486ee37cec3a0119cd1bae6e79f3d5fe693590d03310",
+        "tree": "d03c4525841da32c43327b3201c53912f55f49f07c9ceade217d86f8d5cbb206",
+        "paths": [
+            "C:\\Users\\westn\\Documents\\code\\ezRestic\\test_json"
+        ],
+        "hostname": "nwest",
+        "username": "NWEST\\westn",
+        "program_version": "restic 0.18.1",
+        "summary": {
+            "backup_start": "2026-09-19T22:35:08.927609-04:00",
+            "backup_end": "2026-09-19T22:35:09.6705052-04:00",
+            "files_new": 1,
+            "files_changed": 1,
+            "files_unmodified": 0,
+            "dirs_new": 0,
+            "dirs_changed": 1,
+            "dirs_unmodified": 0,
+            "data_blobs": 2,
+            "tree_blobs": 2,
+            "data_added": 2742,
+            "data_added_packed": 1677,
+            "total_files_processed": 2,
+            "total_bytes_processed": 708
+        },
+        "id": "0d5e6bcd6022fde91ac421bcd6cf788ab4bfb57cb9ab95db61681a72f622ae52",
+        "short_id": "0d5e6bcd"
+    }
+]
