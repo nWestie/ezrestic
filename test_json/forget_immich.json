@@ -1,0 +1,618 @@
+[
+    {
+        "tags": null,
+        "host": "optiplex",
+        "paths": [
+            "/mnt/drive1/immich-app"
+        ],
+        "keep": [
+            {
+                "time": "2026-05-28T02:00:23.176649733-04:00",
+                "parent": "944f3803a5739924fe34f3fff79132547fc2d03976e6ba40ed91c27c0f267797",
+                "tree": "11f4976a0ebaab7fd50b2a818d83c1b6e7bb6ac4a0fce5359cbae7581f1eca9c",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-05-28T02:00:23.176649733-04:00",
+                    "backup_end": "2026-05-28T02:00:35.82625665-04:00",
+                    "files_new": 52,
+                    "files_changed": 1,
+                    "files_unmodified": 6462,
+                    "dirs_new": 49,
+                    "dirs_changed": 64,
+                    "dirs_unmodified": 5869,
+                    "data_blobs": 216,
+                    "tree_blobs": 110,
+                    "data_added": 276704731,
+                    "data_added_packed": 275891668,
+                    "total_files_processed": 6515,
+                    "total_bytes_processed": 18179694099
+                },
+                "id": "58bc93db16e48d7e4765aab59517b66f33d1d1be062f414102a912a002afa175",
+                "short_id": "58bc93db"
+            },
+            {
+                "time": "2026-05-22T02:00:24.409862605-04:00",
+                "parent": "8ed2d88e049b3d8b9099c1390035fab7f5b25851c31a320e7c6050b1098f523d",
+                "tree": "404cd1bb3b81e868f06a88c8a53e40d5ae42ec592b20d9d444d97d9decb586e4",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-05-22T02:00:24.409862605-04:00",
+                    "backup_end": "2026-05-22T02:00:42.919739972-04:00",
+                    "files_new": 79,
+                    "files_changed": 1,
+                    "files_unmodified": 6257,
+                    "dirs_new": 78,
+                    "dirs_changed": 86,
+                    "dirs_unmodified": 5623,
+                    "data_blobs": 342,
+                    "tree_blobs": 158,
+                    "data_added": 428886249,
+                    "data_added_packed": 427572322,
+                    "total_files_processed": 6337,
+                    "total_bytes_processed": 17333547823
+                },
+                "id": "88b994349f71165f7d6b06d44576ac1353646fe1fd1234e46dc17be210769c43",
+                "short_id": "88b99434"
+            },
+            {
+                "time": "2026-05-16T02:00:21.566330672-04:00",
+                "parent": "74620b028906d4d852a48749f3f3e9814ad4b5e7b1a0f3d05794200250903539",
+                "tree": "d7673977a8ed6811254669cc6137410b65684058d178e3eda4fe4912bd6ed3a3",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-05-16T02:00:21.566330672-04:00",
+                    "backup_end": "2026-05-16T02:00:26.483598156-04:00",
+                    "files_new": 111,
+                    "files_changed": 5,
+                    "files_unmodified": 6139,
+                    "dirs_new": 3,
+                    "dirs_changed": 211,
+                    "dirs_unmodified": 5489,
+                    "data_blobs": 10,
+                    "tree_blobs": 215,
+                    "data_added": 9289905,
+                    "data_added_packed": 8542983,
+                    "total_files_processed": 6255,
+                    "total_bytes_processed": 16861148886
+                },
+                "id": "b0b11e81560f1bd66760415481de18f0c4daa041a488095475aadd25a8e076a6",
+                "short_id": "b0b11e81"
+            },
+            {
+                "time": "2026-05-10T02:00:41.792140273-04:00",
+                "parent": "6b16f33d06d79c69c429856961f003b5c011da8f60211fb36989fded26a97dac",
+                "tree": "bea9c88c381a1db2f981a1a8787b0a68d891da5c406ac92578d55dc7716bdef1",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-05-10T02:00:41.792140273-04:00",
+                    "backup_end": "2026-05-10T02:00:48.354508936-04:00",
+                    "files_new": 19,
+                    "files_changed": 1,
+                    "files_unmodified": 6035,
+                    "dirs_new": 123,
+                    "dirs_changed": 117,
+                    "dirs_unmodified": 5318,
+                    "data_blobs": 78,
+                    "tree_blobs": 129,
+                    "data_added": 93595289,
+                    "data_added_packed": 92620736,
+                    "total_files_processed": 6055,
+                    "total_bytes_processed": 16099300835
+                },
+                "id": "15507282f8932b5045cb87ebedd9b9265046e6f3abf341ba408d14a976b21a86",
+                "short_id": "15507282"
+            },
+            {
+                "time": "2026-04-28T02:00:37.708989744-04:00",
+                "parent": "794bd24348ec92a63b5e1f0d08ea5c13418983455e088e646ecfda9d2a5a3d0f",
+                "tree": "e33d3eb507a82ed6da9d616ad54c1d2943099d9089928067fc0c850fb347d845",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-04-28T02:00:37.708989744-04:00",
+                    "backup_end": "2026-04-28T02:00:43.932297161-04:00",
+                    "files_new": 31,
+                    "files_changed": 1,
+                    "files_unmodified": 5945,
+                    "dirs_new": 25,
+                    "dirs_changed": 41,
+                    "dirs_unmodified": 5295,
+                    "data_blobs": 75,
+                    "tree_blobs": 67,
+                    "data_added": 91079942,
+                    "data_added_packed": 90693033,
+                    "total_files_processed": 5977,
+                    "total_bytes_processed": 15805409644
+                },
+                "id": "ed6b4ec0228d8b81b0e8baaab16e9fbeb897a6f35ac7d0892a50eec714bc8ae2",
+                "short_id": "ed6b4ec0"
+            },
+            {
+                "time": "2026-03-31T02:01:14.473962875-04:00",
+                "parent": "df154cce757f80c42952fef14fc6220063c784f3d5bd758e074f839718d80f14",
+                "tree": "c6c90f936fbd3fa85caf9c23f1be7a3550a25605c7cdd6fccdf14437b9956fcf",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-03-31T02:01:14.473962875-04:00",
+                    "backup_end": "2026-03-31T02:01:21.702362466-04:00",
+                    "files_new": 17,
+                    "files_changed": 1,
+                    "files_unmodified": 5739,
+                    "dirs_new": 25,
+                    "dirs_changed": 35,
+                    "dirs_unmodified": 5006,
+                    "data_blobs": 41,
+                    "tree_blobs": 51,
+                    "data_added": 39434570,
+                    "data_added_packed": 39180904,
+                    "total_files_processed": 5757,
+                    "total_bytes_processed": 14417533344
+                },
+                "id": "89804d114fd3367fc3ff5225f54b8a566e6a83f87aedd450b335186c45e16989",
+                "short_id": "89804d11"
+            },
+            {
+                "time": "2026-02-28T02:00:50.652732727-05:00",
+                "parent": "1036d5320f33a3bce299f91dc1a7e89089f7fbcaf7f54afcba4649544907ac8c",
+                "tree": "eed1e022eadcbe900fda1ee17d4d3b36aed50b8d7b6761ddcce2a2e1c987da08",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-02-28T02:00:50.652732727-05:00",
+                    "backup_end": "2026-02-28T02:00:54.826033126-05:00",
+                    "files_new": 14,
+                    "files_changed": 1,
+                    "files_unmodified": 5576,
+                    "dirs_new": 12,
+                    "dirs_changed": 25,
+                    "dirs_unmodified": 4824,
+                    "data_blobs": 35,
+                    "tree_blobs": 37,
+                    "data_added": 53719257,
+                    "data_added_packed": 53414332,
+                    "total_files_processed": 5591,
+                    "total_bytes_processed": 13954624563
+                },
+                "id": "fe0eb30064693e227fd1aad4eafd41305a2418233a3f8028ea1ef12bacad4ae3",
+                "short_id": "fe0eb300"
+            },
+            {
+                "time": "2026-01-25T02:00:47.230247255-05:00",
+                "parent": "cd3b68fafd747ab96aa5a1b2fc44238393a0183a35a6356a58356d5d4fe78e04",
+                "tree": "79d60260fd2a7fceebc7508dd7c809eb95300ce2ffd935d995f8881be915b40d",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-01-25T02:00:47.230247255-05:00",
+                    "backup_end": "2026-01-25T02:00:51.44185325-05:00",
+                    "files_new": 15,
+                    "files_changed": 1,
+                    "files_unmodified": 5461,
+                    "dirs_new": 15,
+                    "dirs_changed": 23,
+                    "dirs_unmodified": 4673,
+                    "data_blobs": 49,
+                    "tree_blobs": 38,
+                    "data_added": 60824536,
+                    "data_added_packed": 60607228,
+                    "total_files_processed": 5477,
+                    "total_bytes_processed": 13692527289
+                },
+                "id": "69b34b88f0619c605570c1edf26d8ca511fe2862ba68842ff857785adc7c1335",
+                "short_id": "69b34b88"
+            },
+            {
+                "time": "2025-12-31T11:17:01.529313937-05:00",
+                "parent": "4cde57bb62df64b5cd30eb094ef5a7db52f639ff86cceece0677ee6cda9947c5",
+                "tree": "846ff639a8384702eb864550092b0982434df3ba2d4661d8a4423203fbf318ad",
+                "paths": [
+                    "/mnt/drive1/immich-app"
+                ],
+                "hostname": "optiplex",
+                "username": "westie",
+                "uid": 1000,
+                "gid": 1000,
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2025-12-31T11:17:01.529313937-05:00",
+                    "backup_end": "2025-12-31T11:17:03.245967404-05:00",
+                    "files_new": 0,
+                    "files_changed": 1,
+                    "files_unmodified": 5348,
+                    "dirs_new": 0,
+                    "dirs_changed": 5,
+                    "dirs_unmodified": 4023,
+                    "data_blobs": 0,
+                    "tree_blobs": 6,
+                    "data_added": 5596,
+                    "data_added_packed": 2553,
+                    "total_files_processed": 5349,
+                    "total_bytes_processed": 13157028645
+                },
+                "id": "7ce9717d0ec7b6081134d1c5cb5c7fa13d6d266f3133f5bd6b8e640034842664",
+                "short_id": "7ce9717d"
+            }
+        ],
+        "remove": null,
+        "reasons": [
+            {
+                "snapshot": {
+                    "time": "2026-05-28T02:00:23.176649733-04:00",
+                    "parent": "944f3803a5739924fe34f3fff79132547fc2d03976e6ba40ed91c27c0f267797",
+                    "tree": "11f4976a0ebaab7fd50b2a818d83c1b6e7bb6ac4a0fce5359cbae7581f1eca9c",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-05-28T02:00:23.176649733-04:00",
+                        "backup_end": "2026-05-28T02:00:35.82625665-04:00",
+                        "files_new": 52,
+                        "files_changed": 1,
+                        "files_unmodified": 6462,
+                        "dirs_new": 49,
+                        "dirs_changed": 64,
+                        "dirs_unmodified": 5869,
+                        "data_blobs": 216,
+                        "tree_blobs": 110,
+                        "data_added": 276704731,
+                        "data_added_packed": 275891668,
+                        "total_files_processed": 6515,
+                        "total_bytes_processed": 18179694099
+                    },
+                    "id": "58bc93db16e48d7e4765aab59517b66f33d1d1be062f414102a912a002afa175",
+                    "short_id": "58bc93db"
+                },
+                "matches": [
+                    "weekly snapshot",
+                    "monthly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2026-05-22T02:00:24.409862605-04:00",
+                    "parent": "8ed2d88e049b3d8b9099c1390035fab7f5b25851c31a320e7c6050b1098f523d",
+                    "tree": "404cd1bb3b81e868f06a88c8a53e40d5ae42ec592b20d9d444d97d9decb586e4",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-05-22T02:00:24.409862605-04:00",
+                        "backup_end": "2026-05-22T02:00:42.919739972-04:00",
+                        "files_new": 79,
+                        "files_changed": 1,
+                        "files_unmodified": 6257,
+                        "dirs_new": 78,
+                        "dirs_changed": 86,
+                        "dirs_unmodified": 5623,
+                        "data_blobs": 342,
+                        "tree_blobs": 158,
+                        "data_added": 428886249,
+                        "data_added_packed": 427572322,
+                        "total_files_processed": 6337,
+                        "total_bytes_processed": 17333547823
+                    },
+                    "id": "88b994349f71165f7d6b06d44576ac1353646fe1fd1234e46dc17be210769c43",
+                    "short_id": "88b99434"
+                },
+                "matches": [
+                    "weekly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2026-05-16T02:00:21.566330672-04:00",
+                    "parent": "74620b028906d4d852a48749f3f3e9814ad4b5e7b1a0f3d05794200250903539",
+                    "tree": "d7673977a8ed6811254669cc6137410b65684058d178e3eda4fe4912bd6ed3a3",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-05-16T02:00:21.566330672-04:00",
+                        "backup_end": "2026-05-16T02:00:26.483598156-04:00",
+                        "files_new": 111,
+                        "files_changed": 5,
+                        "files_unmodified": 6139,
+                        "dirs_new": 3,
+                        "dirs_changed": 211,
+                        "dirs_unmodified": 5489,
+                        "data_blobs": 10,
+                        "tree_blobs": 215,
+                        "data_added": 9289905,
+                        "data_added_packed": 8542983,
+                        "total_files_processed": 6255,
+                        "total_bytes_processed": 16861148886
+                    },
+                    "id": "b0b11e81560f1bd66760415481de18f0c4daa041a488095475aadd25a8e076a6",
+                    "short_id": "b0b11e81"
+                },
+                "matches": [
+                    "weekly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2026-05-10T02:00:41.792140273-04:00",
+                    "parent": "6b16f33d06d79c69c429856961f003b5c011da8f60211fb36989fded26a97dac",
+                    "tree": "bea9c88c381a1db2f981a1a8787b0a68d891da5c406ac92578d55dc7716bdef1",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-05-10T02:00:41.792140273-04:00",
+                        "backup_end": "2026-05-10T02:00:48.354508936-04:00",
+                        "files_new": 19,
+                        "files_changed": 1,
+                        "files_unmodified": 6035,
+                        "dirs_new": 123,
+                        "dirs_changed": 117,
+                        "dirs_unmodified": 5318,
+                        "data_blobs": 78,
+                        "tree_blobs": 129,
+                        "data_added": 93595289,
+                        "data_added_packed": 92620736,
+                        "total_files_processed": 6055,
+                        "total_bytes_processed": 16099300835
+                    },
+                    "id": "15507282f8932b5045cb87ebedd9b9265046e6f3abf341ba408d14a976b21a86",
+                    "short_id": "15507282"
+                },
+                "matches": [
+                    "weekly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2026-04-28T02:00:37.708989744-04:00",
+                    "parent": "794bd24348ec92a63b5e1f0d08ea5c13418983455e088e646ecfda9d2a5a3d0f",
+                    "tree": "e33d3eb507a82ed6da9d616ad54c1d2943099d9089928067fc0c850fb347d845",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-04-28T02:00:37.708989744-04:00",
+                        "backup_end": "2026-04-28T02:00:43.932297161-04:00",
+                        "files_new": 31,
+                        "files_changed": 1,
+                        "files_unmodified": 5945,
+                        "dirs_new": 25,
+                        "dirs_changed": 41,
+                        "dirs_unmodified": 5295,
+                        "data_blobs": 75,
+                        "tree_blobs": 67,
+                        "data_added": 91079942,
+                        "data_added_packed": 90693033,
+                        "total_files_processed": 5977,
+                        "total_bytes_processed": 15805409644
+                    },
+                    "id": "ed6b4ec0228d8b81b0e8baaab16e9fbeb897a6f35ac7d0892a50eec714bc8ae2",
+                    "short_id": "ed6b4ec0"
+                },
+                "matches": [
+                    "monthly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2026-03-31T02:01:14.473962875-04:00",
+                    "parent": "df154cce757f80c42952fef14fc6220063c784f3d5bd758e074f839718d80f14",
+                    "tree": "c6c90f936fbd3fa85caf9c23f1be7a3550a25605c7cdd6fccdf14437b9956fcf",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-03-31T02:01:14.473962875-04:00",
+                        "backup_end": "2026-03-31T02:01:21.702362466-04:00",
+                        "files_new": 17,
+                        "files_changed": 1,
+                        "files_unmodified": 5739,
+                        "dirs_new": 25,
+                        "dirs_changed": 35,
+                        "dirs_unmodified": 5006,
+                        "data_blobs": 41,
+                        "tree_blobs": 51,
+                        "data_added": 39434570,
+                        "data_added_packed": 39180904,
+                        "total_files_processed": 5757,
+                        "total_bytes_processed": 14417533344
+                    },
+                    "id": "89804d114fd3367fc3ff5225f54b8a566e6a83f87aedd450b335186c45e16989",
+                    "short_id": "89804d11"
+                },
+                "matches": [
+                    "monthly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2026-02-28T02:00:50.652732727-05:00",
+                    "parent": "1036d5320f33a3bce299f91dc1a7e89089f7fbcaf7f54afcba4649544907ac8c",
+                    "tree": "eed1e022eadcbe900fda1ee17d4d3b36aed50b8d7b6761ddcce2a2e1c987da08",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-02-28T02:00:50.652732727-05:00",
+                        "backup_end": "2026-02-28T02:00:54.826033126-05:00",
+                        "files_new": 14,
+                        "files_changed": 1,
+                        "files_unmodified": 5576,
+                        "dirs_new": 12,
+                        "dirs_changed": 25,
+                        "dirs_unmodified": 4824,
+                        "data_blobs": 35,
+                        "tree_blobs": 37,
+                        "data_added": 53719257,
+                        "data_added_packed": 53414332,
+                        "total_files_processed": 5591,
+                        "total_bytes_processed": 13954624563
+                    },
+                    "id": "fe0eb30064693e227fd1aad4eafd41305a2418233a3f8028ea1ef12bacad4ae3",
+                    "short_id": "fe0eb300"
+                },
+                "matches": [
+                    "monthly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2026-01-25T02:00:47.230247255-05:00",
+                    "parent": "cd3b68fafd747ab96aa5a1b2fc44238393a0183a35a6356a58356d5d4fe78e04",
+                    "tree": "79d60260fd2a7fceebc7508dd7c809eb95300ce2ffd935d995f8881be915b40d",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-01-25T02:00:47.230247255-05:00",
+                        "backup_end": "2026-01-25T02:00:51.44185325-05:00",
+                        "files_new": 15,
+                        "files_changed": 1,
+                        "files_unmodified": 5461,
+                        "dirs_new": 15,
+                        "dirs_changed": 23,
+                        "dirs_unmodified": 4673,
+                        "data_blobs": 49,
+                        "tree_blobs": 38,
+                        "data_added": 60824536,
+                        "data_added_packed": 60607228,
+                        "total_files_processed": 5477,
+                        "total_bytes_processed": 13692527289
+                    },
+                    "id": "69b34b88f0619c605570c1edf26d8ca511fe2862ba68842ff857785adc7c1335",
+                    "short_id": "69b34b88"
+                },
+                "matches": [
+                    "monthly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2025-12-31T11:17:01.529313937-05:00",
+                    "parent": "4cde57bb62df64b5cd30eb094ef5a7db52f639ff86cceece0677ee6cda9947c5",
+                    "tree": "846ff639a8384702eb864550092b0982434df3ba2d4661d8a4423203fbf318ad",
+                    "paths": [
+                        "/mnt/drive1/immich-app"
+                    ],
+                    "hostname": "optiplex",
+                    "username": "westie",
+                    "uid": 1000,
+                    "gid": 1000,
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2025-12-31T11:17:01.529313937-05:00",
+                        "backup_end": "2025-12-31T11:17:03.245967404-05:00",
+                        "files_new": 0,
+                        "files_changed": 1,
+                        "files_unmodified": 5348,
+                        "dirs_new": 0,
+                        "dirs_changed": 5,
+                        "dirs_unmodified": 4023,
+                        "data_blobs": 0,
+                        "tree_blobs": 6,
+                        "data_added": 5596,
+                        "data_added_packed": 2553,
+                        "total_files_processed": 5349,
+                        "total_bytes_processed": 13157028645
+                    },
+                    "id": "7ce9717d0ec7b6081134d1c5cb5c7fa13d6d266f3133f5bd6b8e640034842664",
+                    "short_id": "7ce9717d"
+                },
+                "matches": [
+                    "monthly snapshot"
+                ]
+            }
+        ]
+    }
+]

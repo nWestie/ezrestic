@@ -6,3 +6,10 @@ dests = ["./.demo_repo"]
 ignore_file = ""
 preaction = "echo preaction"
 postaction = "echo postaction"
+
+
+[src.immich]
+source_dir = ""
+dests = ["rclone:opcbackup:immich"]
+ignore_file = ".restic-ignore"
+preaction = "/home/westie/scripts/immich/immich_db_dump.sh"

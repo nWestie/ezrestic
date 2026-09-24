@@ -1,0 +1,254 @@
+[
+    {
+        "tags": null,
+        "host": "nwest",
+        "paths": null,
+        "keep": [
+            {
+                "time": "2026-09-20T20:13:32.6827224-04:00",
+                "parent": "395a45551d2b93a7afe416302a3971827ff74f40f18355902af807e1e473ba8f",
+                "tree": "e3a3a9a7d5f9c5ab8824b50f2f8ceba63971d5166fa5faa42af5735f3f055647",
+                "paths": [
+                    "C:\\Users\\westn\\Documents\\code\\ezRestic\\ez_restic.py"
+                ],
+                "hostname": "nwest",
+                "username": "NWEST\\westn",
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-09-20T20:13:32.6827224-04:00",
+                    "backup_end": "2026-09-20T20:13:33.4153043-04:00",
+                    "files_new": 0,
+                    "files_changed": 0,
+                    "files_unmodified": 1,
+                    "dirs_new": 0,
+                    "dirs_changed": 0,
+                    "dirs_unmodified": 0,
+                    "data_blobs": 0,
+                    "tree_blobs": 0,
+                    "data_added": 0,
+                    "data_added_packed": 0,
+                    "total_files_processed": 1,
+                    "total_bytes_processed": 13386
+                },
+                "id": "25105c18b18f2765018806ea4fd430d58ac2484bc38ebcf623d62ba83eaa18cb",
+                "short_id": "25105c18"
+            },
+            {
+                "time": "2026-09-19T22:34:44.8404992-04:00",
+                "tree": "8214655b36782d6c38e33408fb7709602c9707b7f501d6ff9d72628be70f8d49",
+                "paths": [
+                    "C:\\Users\\westn\\Documents\\code\\ezRestic\\test_json"
+                ],
+                "hostname": "nwest",
+                "username": "NWEST\\westn",
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-09-19T22:34:44.8404992-04:00",
+                    "backup_end": "2026-09-19T22:34:45.6040067-04:00",
+                    "files_new": 1,
+                    "files_changed": 0,
+                    "files_unmodified": 0,
+                    "dirs_new": 1,
+                    "dirs_changed": 0,
+                    "dirs_unmodified": 0,
+                    "data_blobs": 1,
+                    "tree_blobs": 2,
+                    "data_added": 2172,
+                    "data_added_packed": 1432,
+                    "total_files_processed": 1,
+                    "total_bytes_processed": 809
+                },
+                "id": "a5a69b278f38b5ffa6a9486ee37cec3a0119cd1bae6e79f3d5fe693590d03310",
+                "short_id": "a5a69b27"
+            }
+        ],
+        "remove": [
+            {
+                "time": "2026-09-20T20:13:22.6585754-04:00",
+                "parent": "d55b900a4a51cff838da1540fb2336e2b0dc1d4bc2a1c6e0e3caf3cc72f9dfd9",
+                "tree": "e3a3a9a7d5f9c5ab8824b50f2f8ceba63971d5166fa5faa42af5735f3f055647",
+                "paths": [
+                    "C:\\Users\\westn\\Documents\\code\\ezRestic\\ez_restic.py"
+                ],
+                "hostname": "nwest",
+                "username": "NWEST\\westn",
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-09-20T20:13:22.6585754-04:00",
+                    "backup_end": "2026-09-20T20:13:23.3671945-04:00",
+                    "files_new": 0,
+                    "files_changed": 0,
+                    "files_unmodified": 1,
+                    "dirs_new": 0,
+                    "dirs_changed": 0,
+                    "dirs_unmodified": 0,
+                    "data_blobs": 0,
+                    "tree_blobs": 0,
+                    "data_added": 0,
+                    "data_added_packed": 0,
+                    "total_files_processed": 1,
+                    "total_bytes_processed": 13386
+                },
+                "id": "395a45551d2b93a7afe416302a3971827ff74f40f18355902af807e1e473ba8f",
+                "short_id": "395a4555"
+            },
+            {
+                "time": "2026-09-20T20:13:11.5561116-04:00",
+                "parent": "0e92e057ee36c72c5522db316b617cf581c9beab8d3a7b134af68049bd3c65f6",
+                "tree": "e3a3a9a7d5f9c5ab8824b50f2f8ceba63971d5166fa5faa42af5735f3f055647",
+                "paths": [
+                    "C:\\Users\\westn\\Documents\\code\\ezRestic\\ez_restic.py"
+                ],
+                "hostname": "nwest",
+                "username": "NWEST\\westn",
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-09-20T20:13:11.5561116-04:00",
+                    "backup_end": "2026-09-20T20:13:12.3262793-04:00",
+                    "files_new": 0,
+                    "files_changed": 0,
+                    "files_unmodified": 1,
+                    "dirs_new": 0,
+                    "dirs_changed": 0,
+                    "dirs_unmodified": 0,
+                    "data_blobs": 0,
+                    "tree_blobs": 0,
+                    "data_added": 0,
+                    "data_added_packed": 0,
+                    "total_files_processed": 1,
+                    "total_bytes_processed": 13386
+                },
+                "id": "d55b900a4a51cff838da1540fb2336e2b0dc1d4bc2a1c6e0e3caf3cc72f9dfd9",
+                "short_id": "d55b900a"
+            },
+            {
+                "time": "2026-09-20T20:12:31.2606325-04:00",
+                "tree": "e3a3a9a7d5f9c5ab8824b50f2f8ceba63971d5166fa5faa42af5735f3f055647",
+                "paths": [
+                    "C:\\Users\\westn\\Documents\\code\\ezRestic\\ez_restic.py"
+                ],
+                "hostname": "nwest",
+                "username": "NWEST\\westn",
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-09-20T20:12:31.2606325-04:00",
+                    "backup_end": "2026-09-20T20:12:32.0985009-04:00",
+                    "files_new": 1,
+                    "files_changed": 0,
+                    "files_unmodified": 0,
+                    "dirs_new": 0,
+                    "dirs_changed": 0,
+                    "dirs_unmodified": 0,
+                    "data_blobs": 1,
+                    "tree_blobs": 1,
+                    "data_added": 14066,
+                    "data_added_packed": 5118,
+                    "total_files_processed": 1,
+                    "total_bytes_processed": 13386
+                },
+                "id": "0e92e057ee36c72c5522db316b617cf581c9beab8d3a7b134af68049bd3c65f6",
+                "short_id": "0e92e057"
+            },
+            {
+                "time": "2026-09-19T22:35:08.927609-04:00",
+                "parent": "a5a69b278f38b5ffa6a9486ee37cec3a0119cd1bae6e79f3d5fe693590d03310",
+                "tree": "d03c4525841da32c43327b3201c53912f55f49f07c9ceade217d86f8d5cbb206",
+                "paths": [
+                    "C:\\Users\\westn\\Documents\\code\\ezRestic\\test_json"
+                ],
+                "hostname": "nwest",
+                "username": "NWEST\\westn",
+                "program_version": "restic 0.18.1",
+                "summary": {
+                    "backup_start": "2026-09-19T22:35:08.927609-04:00",
+                    "backup_end": "2026-09-19T22:35:09.6705052-04:00",
+                    "files_new": 1,
+                    "files_changed": 1,
+                    "files_unmodified": 0,
+                    "dirs_new": 0,
+                    "dirs_changed": 1,
+                    "dirs_unmodified": 0,
+                    "data_blobs": 2,
+                    "tree_blobs": 2,
+                    "data_added": 2742,
+                    "data_added_packed": 1677,
+                    "total_files_processed": 2,
+                    "total_bytes_processed": 708
+                },
+                "id": "0d5e6bcd6022fde91ac421bcd6cf788ab4bfb57cb9ab95db61681a72f622ae52",
+                "short_id": "0d5e6bcd"
+            }
+        ],
+        "reasons": [
+            {
+                "snapshot": {
+                    "time": "2026-09-20T20:13:32.6827224-04:00",
+                    "parent": "395a45551d2b93a7afe416302a3971827ff74f40f18355902af807e1e473ba8f",
+                    "tree": "e3a3a9a7d5f9c5ab8824b50f2f8ceba63971d5166fa5faa42af5735f3f055647",
+                    "paths": [
+                        "C:\\Users\\westn\\Documents\\code\\ezRestic\\ez_restic.py"
+                    ],
+                    "hostname": "nwest",
+                    "username": "NWEST\\westn",
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-09-20T20:13:32.6827224-04:00",
+                        "backup_end": "2026-09-20T20:13:33.4153043-04:00",
+                        "files_new": 0,
+                        "files_changed": 0,
+                        "files_unmodified": 1,
+                        "dirs_new": 0,
+                        "dirs_changed": 0,
+                        "dirs_unmodified": 0,
+                        "data_blobs": 0,
+                        "tree_blobs": 0,
+                        "data_added": 0,
+                        "data_added_packed": 0,
+                        "total_files_processed": 1,
+                        "total_bytes_processed": 13386
+                    },
+                    "id": "25105c18b18f2765018806ea4fd430d58ac2484bc38ebcf623d62ba83eaa18cb",
+                    "short_id": "25105c18"
+                },
+                "matches": [
+                    "weekly snapshot",
+                    "monthly snapshot"
+                ]
+            },
+            {
+                "snapshot": {
+                    "time": "2026-09-19T22:34:44.8404992-04:00",
+                    "tree": "8214655b36782d6c38e33408fb7709602c9707b7f501d6ff9d72628be70f8d49",
+                    "paths": [
+                        "C:\\Users\\westn\\Documents\\code\\ezRestic\\test_json"
+                    ],
+                    "hostname": "nwest",
+                    "username": "NWEST\\westn",
+                    "program_version": "restic 0.18.1",
+                    "summary": {
+                        "backup_start": "2026-09-19T22:34:44.8404992-04:00",
+                        "backup_end": "2026-09-19T22:34:45.6040067-04:00",
+                        "files_new": 1,
+                        "files_changed": 0,
+                        "files_unmodified": 0,
+                        "dirs_new": 1,
+                        "dirs_changed": 0,
+                        "dirs_unmodified": 0,
+                        "data_blobs": 1,
+                        "tree_blobs": 2,
+                        "data_added": 2172,
+                        "data_added_packed": 1432,
+                        "total_files_processed": 1,
+                        "total_bytes_processed": 809
+                    },
+                    "id": "a5a69b278f38b5ffa6a9486ee37cec3a0119cd1bae6e79f3d5fe693590d03310",
+                    "short_id": "a5a69b27"
+                },
+                "matches": [
+                    "oldest weekly snapshot",
+                    "oldest monthly snapshot"
+                ]
+            }
+        ]
+    }
+]
