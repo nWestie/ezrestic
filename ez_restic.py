@@ -2,6 +2,7 @@
 import argparse
 import json
 import subprocess as subp
+import sys
 import tomllib
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -11,9 +12,12 @@ from types import MappingProxyType
 from typing import Any
 
 
-def size_fmt(num, suffix="iB", binary=True):
+def size_fmt(num, suffix="B", binary=True):
     """Metric post-fix notation for orders of magnitude"""
     div = 1024.0 if binary else 1000.0
+    if binary and num > 1024:
+        suffix = "i" + suffix
+
     for unit in ("", "K", "M", "G", "T", "P", "E", "Z"):
         if abs(num) < div:
             return f"{num:3.2f}{unit}{suffix}"
@@ -21,20 +25,20 @@ def size_fmt(num, suffix="iB", binary=True):
     return f"{num:.2f}Y{suffix}"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ID:
     "An ID string that displays a shortened"
 
     id: str
 
     def __str__(self) -> str:
-        return self.id[:7]
+        return self.id[:8]
 
     def __repr__(self) -> str:
         return self.id
 
 
-@dataclass
+@dataclass(frozen=True)
 class SnapshotStats:
     """Contains extended detail about a single snapshot. See fields at https://restic.readthedocs.io/en/stable/075_scripting.html#backup"""
 
@@ -63,56 +67,72 @@ class SnapshotStats:
         }
         return cls(**data)
 
-    def summary(self, show_id=True) -> str:
+    def summary(self) -> str:
         tot_size = size_fmt(self.total_bytes_processed)
         added_size = size_fmt(self.data_added_packed)
-        res = f"- Snapshot Size: {tot_size} (unpacked)"
-        res += f"- Bytes Added: {added_size}"
-        res += f"- Files Added: {self.files_new} - Changed: {self.files_changed}"
+        res = f"- Snapshot Size: {tot_size} (unpacked)\n"
+        res += f"- Bytes Added: {added_size}\n"
+        res += f"- Files Added: {self.files_new} - Changed: {self.files_changed}\n"
         return res
 
 
-@dataclass
+@dataclass(frozen=True)
 class Snapshot:
     """Represents a specific "snapshot" - a single instance of backup history"""
 
-    id: ID
-    time: datetime
-    paths: list[str]
-    hostname: str
-    stats: SnapshotStats
+    id: ID  # Snapshot ID
+    summary: SnapshotStats  # Snapshot statistics
+    time: datetime  # Timestamp of when the backup was started
+    tree: str  # ID of the root tree blob
+    paths: list[str]  # List of paths included in the backup
+    hostname: str  # Hostname of the backed up machine
+    username: str  # Username the backup command was run as
+    program_version: str  # restic version used to create snapshot
+    parent: str | None = None  # ID of the parent snapshot
+    uid: int | None = None  # ID of owner
+    gid: int | None = None  # ID of group
+    # List of paths and globs excluded from the backup
+    excludes: list[str] = field(default_factory=list)
+    # List of tags for the snapshot in question
     tags: list[str] = field(default_factory=list)
 
-    def __init__(self, json_dat: dict[str, Any]):
-        self.time = datetime.fromisoformat(json_dat["time"])
-        self.id = ID(json_dat["id"])
-        self.paths = json_dat["paths"]
-        self.tags = json_dat.get("tags", [])
-        self.hostname = json_dat["hostname"]
-        json_dat["summary"]["snapshot_id"] = json_dat["id"]
-        self.stats = SnapshotStats(**json_dat["summary"])
+    @classmethod
+    def from_json(cls, data) -> "Snapshot":
+        del data["short_id"]
+        data = {
+            **data,
+            "time": datetime.fromisoformat(data["time"]),
+            "summary": SnapshotStats.from_json(data["summary"]),
+            "id": ID(data["id"]),
+        }
+        return cls(**data)
 
     def __repr__(self) -> str:
-        ret = f"SNAP-ID{self.id}: {self.time.strftime('%Y-%m-%d %H:%M')}\n"
+        ret = f"Snapshot {self.id}: {self.time.strftime('%Y-%m-%d %H:%M')}\n"
+        ret += f"- {self.program_version}\n"
         ret += f"- paths: {', '.join(self.paths)}\n"
         if self.tags:
             ret += f"- tags: {', '.join(self.tags)}\n"
-        ret += self.stats.summary(show_id=False) + "\n"
+        ret += self.summary.summary() + "\n"
         return ret
 
 
-@dataclass
+@dataclass(frozen=True)
 class ForgetResult:
     """Details of a forget action, including kept/removed snapshots"""
 
     removed: list[Snapshot]
-    kept: list[Snapshot]
-    reasons: list[list[str]]
+    kept: list[tuple[Snapshot, list[str]]]
 
-    def __init__(self, json_dat: dict[str, Any]):
-        self.removed = [Snapshot(s) for s in json_dat.get("remove", [])]
-        self.kept = [Snapshot(s) for s in json_dat.get("keep", [])]
-        self.reasons = [s for s in json_dat.get("reasons", [])]
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> "ForgetResult":
+        kept_snaps = [Snapshot.from_json(s) for s in data.get("keep", [])]
+        kept_reasons: list[list[str]] = [s for s in data.get("reasons", [])]
+        out_data = {
+            "removed": [Snapshot.from_json(s) for s in data.get("remove", [])],
+            "kept": list(zip(kept_snaps, kept_reasons)),
+        }
+        return cls(**out_data)
 
     def __repr__(self) -> str:
         repr_str = ""
@@ -123,9 +143,30 @@ class ForgetResult:
 
         if len(self.kept):
             repr_str += "Keeping:\n"
-            for snap, reasons in zip(self.kept, self.reasons):
+            for snap, reasons in self.kept:
                 repr_str += f"- {snap} - kept as: {', '.join(reasons)}"
         return repr_str
+
+
+@dataclass(frozen=True)
+class CheckResult:
+    """Output of the check command, includes recommended actions"""
+
+    num_errors: int  # Number of errors
+    suggest_repair_index: bool  # Run "restic repair index"
+    suggest_prune: bool  # Run "restic prune"
+    # Run "restic repair packs ID…" and "restic repair snapshots –forget" to remove damaged files
+    broken_packs: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> "CheckResult":
+        del data["message_type"]
+        return cls(**data)
+
+    def is_good(self) -> bool:
+        good = (self.num_errors == 0) and len(self.broken_packs) == 0
+        good = good and not (self.suggest_prune)
+        return good
 
 
 class ResticError(ValueError):
@@ -198,7 +239,7 @@ class EZRestic:
 
         line = res.stdout.decode().splitlines()[-1]
         summary = SnapshotStats(**json.loads(line))
-        print("Success -", summary.summary(show_id=False))
+        print("Success -", summary.summary())
 
     def get_snapshots(self, repo, filters=None) -> list[Snapshot]:
         """Fetches Snapshots stored on the specified repo"""
@@ -209,7 +250,35 @@ class EZRestic:
             raise res
 
         obj = json.loads(res.stdout.decode())
-        return [Snapshot(snap) for snap in obj]
+        return [Snapshot.from_json(snap) for snap in obj]
+
+    def do_check(self, repo) -> CheckResult:
+        res = self._call_restic(repo, ["check"])
+        if isinstance(res, ResticError):
+            raise res
+        obj = json.loads(res.stdout.decode("utf-8"))
+        return CheckResult.from_json(obj)
+
+    def do_forget(self, repo: str, weekly=4, monthly=6) -> ForgetResult:
+        """Delete old backups according to a keep-scheme"""
+        # NOTE: grouping by host removes path grouping.
+        # Restic seems to expect backups from multiple sources to be dumped in 1 repo,
+        # I have seperate repos for each and don't want them seperated by path
+        # (mostly to make immich prune properly)
+        res = self._call_restic(repo, [f"--keep-weekly {weekly}", "--keep-monthly {monthly}", "--group-by host"])
+        if isinstance(res, ResticError):
+            raise res
+        obj = json.loads(res.stdout.decode("utf-8"))
+        return ForgetResult.from_json(obj)
+
+    def do_prune(self, repo:str)->str:
+        """Runs prune - returns raw output. TODO: No good way to parse it currently."""
+        res = self._call_restic(repo, ["prune"])
+        if isinstance(res, ResticError):
+            raise res
+        return res.stdout.decode("utf-8")
+        
+            
 
     def _check_repo_exists(self, dest_repo: str):
         """Raises exception if repo does not exist"""
@@ -246,6 +315,15 @@ class Source:
     preaction: str | None = None
     postaction: str | None = None
     ignore_files: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_toml(cls, name, data) -> "Source":
+        """constructs a source from it's Toml representation in the config file"""
+        ignore = data.pop("ignore_file", None)
+        if ignore:
+            ignore = Path(data["source_dir"]).joinpath(ignore).absolute()
+            data["ignore_files"] = [str(ignore)]
+        return cls(name, **data)
 
     def _call_action(self, action: str) -> bool:
         """runs pre/post action"""
@@ -286,12 +364,9 @@ def load_config(config_file: Path) -> tuple[list[Source], Path]:
 
     src: dict[str, dict] = config.pop("src")
     sources: list[Source] = []
-    for k, v in src.items():
-        ignore = v.pop("ignore_file", None)
-        if ignore:
-            ignore = Path(v["source_dir"]).joinpath(ignore).absolute()
-            v["ignore_files"] = [str(ignore)]
-        sources.append(Source(k, **v))
+    for name, data in src.items():
+        sources.append(Source.from_toml(name, data))
+
     return sources, pass_file
 
 
@@ -356,16 +431,4 @@ def main():
 
 
 if __name__ == "__main__":
-    exit(main())
-
-    # def do_prune(self, dest: str, weekly=4, monthly=6) -> PruneResult:
-    #     """Delete old backups according to a keep-scheme"""
-    #     # NOTE: grouping by host removes path grouping.
-    #     # Restic seems to expect backups from multiple sources to be dumped in 1 repo,
-    #     # I have seperate repos for each and don't want them seperated by path
-    #     # (mostly to make immich prune properly)
-    #     restic.repository = dest
-    #     rForget = restic.forget(
-    #         keep_weekly=weekly, keep_monthly=monthly, group_by=["host"], prune=True
-    #     )[0]
-    #     return PruneResult(rForget)
+    sys.exit(main())
