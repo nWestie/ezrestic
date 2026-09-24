@@ -8,8 +8,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from types import MappingProxyType
-from typing import Any
+from typing import Any, ClassVar
 
 
 def size_fmt(num, suffix="B", binary=True):
@@ -169,44 +168,56 @@ class CheckResult:
         return good
 
 
+@dataclass
 class ResticError(ValueError):
-    restic_errs = MappingProxyType(
-        {
-            0: "Command was successful",
-            1: "Command failed, see command help for more details",
-            2: "Go runtime error",
-            3: "backup could not read some source data, or forget could not remove one or more snapshots",
-            10: "Repository does not exist (since restic 0.17.0)",
-            11: "Failed to lock repository (since restic 0.17.0)",
-            12: "Wrong password (since restic 0.17.1)",
-            130: "Command was cancelled (e.g. SIGINT or SIGTERM)",
-        }
-    )
+    restic_errs: ClassVar[dict[int, str]] = {
+        0: "Command was successful",
+        1: "Command failed, see command help for more details",
+        2: "Go runtime error",
+        3: "backup could not read some source data, or forget could not remove one or more snapshots",
+        10: "Repository does not exist",
+        11: "Failed to lock repository",
+        12: "Wrong password",
+        130: "Command was cancelled (e.g. SIGINT or SIGTERM)",
+    }
+    code: int
+    message: str
+    ext_message: str
 
-    def __init__(self, restic_err_json: str):
+    @property
+    def sys_message(self):
+        return self.restic_errs[self.code]
+
+    @classmethod
+    def from_cli(cls, res: subp.CompletedProcess[bytes]):
         """Build error from restic return"""
+        text = res.stderr.decode()
+        lines = text.splitlines()
         try:
-            lines = restic_err_json.splitlines()
-            if len(lines) > 1:
-                self.other_msgs = "\n".join(lines[:-1])
-
             obj = json.loads(lines[-1])
-            self.type = obj["message_type"]
-            self.code = obj["code"]
-            self.message = obj["message"]
-            self.sys_message = self.restic_errs[self.code]
+            del obj["message_type"]
+            obj = {**obj, "ext_message": "\n".join(lines[:-1])}
+            if obj["code"] == 10:
+                # This is a code smell, it should probably
+                # be in some 'restic_error_factory' or some bs like
+                # that, but I'm not about that life, it's fine
+                return ResticRepoNotFoundError(**obj)
+            return cls(**obj)
         except ValueError:
-            self.message = restic_err_json
-            self.type = "Unknown Error Format"
-            self.code = -1
+            return cls(-1, text, "")
 
     def __str__(self):
-        return f"ERROR Code: {self.code} - {self.message}"
-
-    def full_message(self):
         return (
-            f"Code: {self.code} - {self.type}\n{self.message}\n"
-            + f"Other Codes:\n{self.other_msgs}"
+            f"Code: {self.code} - {self.sys_message}\n"
+            + f"{self.message}\n"
+            + (f"Other Codes:\n{self.ext_message}" if self.ext_message else "")
+        )
+
+
+class ResticRepoNotFoundError(ResticError):
+    def __str__(self):
+        return f"{self.message}\n" + (
+            f"Other Codes:\n{self.ext_message}" if self.ext_message else ""
         )
 
 
@@ -229,33 +240,26 @@ class EZRestic:
         print(f"Successfully initiated repo at {dest_repo}")
         return True
 
-    def backup_to(self, dest_repo: str, source_dir: str) -> None:
-        """Calls restic to backup a source to a single destination"""
-        self._check_repo_exists(dest_repo)
-
-        res = self._call_restic(dest_repo, ["backup", source_dir])
-        if isinstance(res, ResticError):
-            raise res
-
-        line = res.stdout.decode().splitlines()[-1]
-        summary = SnapshotStats(**json.loads(line))
-        print("Success -", summary.summary())
-
     def get_snapshots(self, repo, filters=None) -> list[Snapshot]:
         """Fetches Snapshots stored on the specified repo"""
         if not filters:
             filters = []
         res = self._call_restic(repo, ["snapshots", *filters])
-        if isinstance(res, ResticError):
-            raise res
-
         obj = json.loads(res.stdout.decode())
         return [Snapshot.from_json(snap) for snap in obj]
 
+    def do_backup(self, dest_repo: str, source_dir: str) -> None:
+        """Calls restic to backup a source to a single destination"""
+        self._check_repo_exists(dest_repo)
+
+        res = self._call_restic(dest_repo, ["backup", source_dir])
+        line = res.stdout.decode().splitlines()[-1]
+        summary = SnapshotStats(**json.loads(line))
+        print("Success -", summary.summary())
+
     def do_check(self, repo) -> CheckResult:
+        """Check repo status, returns suggusted prune/repair. May throw ResticError"""
         res = self._call_restic(repo, ["check"])
-        if isinstance(res, ResticError):
-            raise res
         obj = json.loads(res.stdout.decode("utf-8"))
         return CheckResult.from_json(obj)
 
@@ -265,26 +269,27 @@ class EZRestic:
         # Restic seems to expect backups from multiple sources to be dumped in 1 repo,
         # I have seperate repos for each and don't want them seperated by path
         # (mostly to make immich prune properly)
-        res = self._call_restic(repo, [f"--keep-weekly {weekly}", "--keep-monthly {monthly}", "--group-by host"])
-        if isinstance(res, ResticError):
-            raise res
+        res = self._call_restic(
+            repo,
+            [f"--keep-weekly {weekly}", "--keep-monthly {monthly}", "--group-by host"],
+        )
         obj = json.loads(res.stdout.decode("utf-8"))
         return ForgetResult.from_json(obj)
 
-    def do_prune(self, repo:str)->str:
+    def do_prune(self, repo: str) -> str:
         """Runs prune - returns raw output. TODO: No good way to parse it currently."""
         res = self._call_restic(repo, ["prune"])
-        if isinstance(res, ResticError):
-            raise res
         return res.stdout.decode("utf-8")
-        
-            
 
-    def _check_repo_exists(self, dest_repo: str):
+    def _check_repo_exists(self, dest_repo: str) -> bool:
         """Raises exception if repo does not exist"""
-        res = self._call_restic(dest_repo, ["cat", "config"])
-        if isinstance(res, ResticError):
-            raise res
+        try:
+            _ = self._call_restic(dest_repo, ["cat", "config"])
+        except ResticError as e:
+            if e.code == 10:
+                return False
+            raise
+        return True
 
     def _call_restic(self, repo: str, cmd: list[str] | str):
         if isinstance(cmd, str):
@@ -300,7 +305,7 @@ class EZRestic:
         ]
         res = subp.run(cmd_list, capture_output=True, check=False)
         if res.returncode != 0:
-            return ResticError(res.stderr.decode())
+            raise ResticError.from_cli(res)
         return res
 
 
@@ -336,7 +341,7 @@ class Source:
             if self.preaction:
                 self._call_action(self.preaction)
             for dest in self.dests:
-                restic_instance.backup_to(dest, self.source_dir)
+                restic_instance.do_backup(dest, self.source_dir)
             if self.postaction:
                 self._call_action(self.postaction)
         except subp.CalledProcessError as e:

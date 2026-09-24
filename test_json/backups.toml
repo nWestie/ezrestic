@@ -7,6 +7,14 @@ ignore_file = ""
 preaction = "echo preaction"
 postaction = "echo postaction"
 
+# Doesn't exist, for testing checks
+[src.dne]
+source_dir = "./dne"
+dests = ["./.dne"]
+ignore_file = ""
+preaction = "echo preaction"
+postaction = "echo postaction"
+
 
 [src.immich]
 source_dir = ""
