@@ -1,23 +1,19 @@
-restic_pass_file = "restic_pass"
+restic_pass_file = "test_json/restic_pass"
 
 [src.demo]
 source_dir = "./test_json"
 dests = ["./.demo_repo"]
-ignore_file = ""
-preaction = "echo preaction"
-postaction = "echo postaction"
+preaction = ["echo", "preaction"]
+postaction = ["echo", "postaction"]
 
 # Doesn't exist, for testing checks
 [src.dne]
 source_dir = "./dne"
 dests = ["./.dne"]
-ignore_file = ""
-preaction = "echo preaction"
-postaction = "echo postaction"
 
 
 [src.immich]
 source_dir = ""
 dests = ["rclone:opcbackup:immich"]
 ignore_file = ".restic-ignore"
-preaction = "/home/westie/scripts/immich/immich_db_dump.sh"
+preaction = ["/home/westie/scripts/immich/immich_db_dump.sh"]

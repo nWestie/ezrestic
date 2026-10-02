@@ -1,13 +1,12 @@
-#! /usr/bin/python3
 import argparse
 import json
 import subprocess as subp
 import sys
 import tomllib
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, ClassVar
 
 
@@ -19,9 +18,9 @@ def size_fmt(num, suffix="B", binary=True):
 
     for unit in ("", "K", "M", "G", "T", "P", "E", "Z"):
         if abs(num) < div:
-            return f"{num:3.2f}{unit}{suffix}"
+            return f"{num:.3g}{unit}{suffix}"
         num /= div
-    return f"{num:.2f}Y{suffix}"
+    return f"{num:.3g}Y{suffix}"
 
 
 @dataclass(frozen=True)
@@ -148,6 +147,38 @@ class ForgetResult:
 
 
 @dataclass(frozen=True)
+class RepoStatsResult:
+    total_size: int  # Repository size in bytes
+    total_file_count: int  # Number of blobs in the repository
+    snapshots_count: int  # Number of processed snapshots
+    stored_size: float
+    total_uncompressed_size: int
+    compression_ratio: float
+    compression_progress: float
+    compression_space_saving: float
+    total_blob_count: int
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> "RepoStatsResult":
+        return cls(**data)
+
+    def __repr__(self) -> str:
+        restore_sz_fmt = size_fmt(self.total_size)
+        stored_sz_fmt = size_fmt(self.stored_size)
+        files_format = size_fmt(
+            self.total_file_count,
+            suffix="",
+            binary=False,
+        )
+        res = f"- Repository Size: {stored_sz_fmt}\n"
+        res += f"- Compression: {self.compression_ratio:.2g}x\n"
+        res += f"- Snapshots: {self.snapshots_count}\n"
+        res += f"- Files: {files_format}\n"
+        res += f"- Restore Size: {restore_sz_fmt}"
+        return res
+
+
+@dataclass(frozen=True)
 class CheckResult:
     """Output of the check command, includes recommended actions"""
 
@@ -168,7 +199,7 @@ class CheckResult:
         return good
 
 
-@dataclass
+@dataclass(frozen=True)
 class ResticError(ValueError):
     restic_errs: ClassVar[dict[int, str]] = {
         0: "Command was successful",
@@ -221,22 +252,20 @@ class ResticRepoNotFoundError(ResticError):
         )
 
 
+@dataclass(frozen=True)
 class EZRestic:
-    """Wraps Restic CLI, uses JSON output"""
+    """Wraps Restic CLI, parsing the CLI's JSON output into clean objects"""
 
-    def __init__(self, pass_file: str | Path):
-        self.pass_file = str(pass_file)
+    pass_file: str
+    restic_path: str
 
     def init_repo(self, dest_repo) -> bool:
-        """Returns none if successful, or error"""
-        res = self._call_restic(dest_repo, ["init"])
+        """Returns True if successful, or errors if it fails"""
+        _ = self._call_restic(dest_repo, ["init"])
         # Result:
         # {'message_type': 'initialized',
         # 'id': 'ce25a3a09a...',
         # 'repository': './example'}
-        if isinstance(res, ResticError):
-            print(res)
-            return False
         print(f"Successfully initiated repo at {dest_repo}")
         return True
 
@@ -247,6 +276,15 @@ class EZRestic:
         res = self._call_restic(repo, ["snapshots", *filters])
         obj = json.loads(res.stdout.decode())
         return [Snapshot.from_json(snap) for snap in obj]
+
+    def get_stats(self, repo) -> RepoStatsResult:
+        res = self._call_restic(repo, ["stats"])
+        res_size = self._call_restic(repo, ["stats", "--mode", "raw-data"])
+        obj: dict = json.loads(res.stdout.decode())
+        sz_obj: dict = json.loads(res_size.stdout.decode())
+        sz_obj["stored_size"] = sz_obj.pop("total_size")
+        obj |= sz_obj
+        return RepoStatsResult.from_json(obj)
 
     def do_backup(self, dest_repo: str, source_dir: str) -> None:
         """Calls restic to backup a source to a single destination"""
@@ -294,7 +332,7 @@ class EZRestic:
     def _call_restic(self, repo: str, cmd: list[str] | str):
         if isinstance(cmd, str):
             cmd = [cmd]
-        cmd_list = [
+        full_cmd = [
             "restic",
             *cmd,
             "--password-file",
@@ -303,13 +341,13 @@ class EZRestic:
             repo,
             "--json",
         ]
-        res = subp.run(cmd_list, capture_output=True, check=False)
+        res = subp.run(full_cmd, capture_output=True, check=False)
         if res.returncode != 0:
             raise ResticError.from_cli(res)
         return res
 
 
-@dataclass
+@dataclass(frozen=True)
 class Source:
     """Represents a backup to be done, as stored in config.
     One source, multiple desitnations, with pre/post actions"""
@@ -317,12 +355,12 @@ class Source:
     name: str
     source_dir: str
     dests: list[str]
-    preaction: str | None = None
-    postaction: str | None = None
+    preaction: list[str] | None = None
+    postaction: list[str] | None = None
     ignore_files: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_toml(cls, name, data) -> "Source":
+    def from_toml(cls, name, data: dict[str, Any]) -> "Source":
         """constructs a source from it's Toml representation in the config file"""
         ignore = data.pop("ignore_file", None)
         if ignore:
@@ -330,109 +368,112 @@ class Source:
             data["ignore_files"] = [str(ignore)]
         return cls(name, **data)
 
-    def _call_action(self, action: str) -> bool:
-        """runs pre/post action"""
-        subp.run(action.split(), check=True)
-        return True
-
     def run_backups(self, restic_instance: EZRestic):
-        """Runs preaction, backups, and postaction"""
+        """Runs preaction, backups, and postaction for this source"""
         try:
             if self.preaction:
-                self._call_action(self.preaction)
+                self._call_shell_action(self.preaction)
             for dest in self.dests:
                 restic_instance.do_backup(dest, self.source_dir)
             if self.postaction:
-                self._call_action(self.postaction)
+                self._call_shell_action(self.postaction)
         except subp.CalledProcessError as e:
             print(f"Error {e.returncode}: {e.output}")
         except ResticError as e:
             print(e)
 
-    @classmethod
-    def get_by_name(cls, name: str, source_list: Iterable["Source"]) -> "Source":
-        "finds source object with matching name in list"
-        source = next(filter(lambda s: s.name == name, source_list), None)
-        if source is None:
-            raise ValueError(f"Source not found: {name}")
-        return source
-
-
-def load_config(config_file: Path) -> tuple[list[Source], Path]:
-    """Loads toml comfig file from the specified path,
-    returning source objects and the restic password path"""
-
-    with open(config_file, "rb") as tml:
-        config = tomllib.load(tml)
-    pass_file = config.pop("restic_pass_file")
-    pass_file = config_file.parent.joinpath(pass_file).absolute()
-
-    src: dict[str, dict] = config.pop("src")
-    sources: list[Source] = []
-    for name, data in src.items():
-        sources.append(Source.from_toml(name, data))
-
-    return sources, pass_file
-
-
-def run_all_backups(args, sources: Iterable[Source], restic: EZRestic):
-    """called by 'run' command"""
-    if args.source:
-        source = Source.get_by_name(args.source, sources)
-        source.run_backups(restic)
-        return
-
-    for source in sources:
-        source.run_backups(restic)
-
-
-def get_status(args, sources: Iterable[Source], restic: EZRestic):
-    """called by 'status' command. gets status(es) of repo(s)"""
-    start_index = 0 if args.verbose else -3
-    if args.source:
-        source = Source.get_by_name(args.source, sources)
-        for dest in source.dests:
+    def get_repo_statuses(self, restic: EZRestic, count_last_snaps=0):
+        """lists snapshots stored in each destination."""
+        for dest in self.dests:
             print(f"---Dest: {dest}---")
             snaps = restic.get_snapshots(dest)
-            _ = [print(s) for s in snaps[start_index:]]
+            _ = [print(s) for s in snaps[-count_last_snaps:]]
+
+    def _call_shell_action(self, action: list[str]) -> bool:
+        """runs pre/post action (space delimited )"""
+        subp.run(action, check=True)
+        return True
+
+
+@dataclass(frozen=True)
+class BackupList:
+    restic_inst: EZRestic
+    sources: MappingProxyType[str, Source]
+
+    @classmethod
+    def from_config(cls, config_text: str) -> "BackupList":
+        config = tomllib.loads(config_text)
+        pass_file = config.pop("restic_pass_file")
+        restic_path = config.pop("restic_path", "restic")
+        pass_file = str(Path(pass_file).absolute())
+
+        restic = EZRestic(pass_file, restic_path)
+
+        src: dict[str, dict] = config.pop("src")
+        sources: dict[str, Source] = {}
+        for name, data in src.items():
+            sources[name] = Source.from_toml(name, data)
+        return cls(restic, MappingProxyType(sources))
+
+    def run_all_backups(self):
+        """called by 'run' command"""
+        for source in self.sources.values():
+            source.run_backups(self.restic_inst)
+
+
+def get_status(args, backups: BackupList):
+    """called by 'status' command. gets status(es) of repo(s)"""
+    snapshot_ct = 0 if args.verbose else 5
+    if args.source and (s := backups.sources.get(args.source)):
+        s.get_repo_statuses(backups.restic_inst, snapshot_ct)
     if args.dest:
-        restic.get_snapshots(args.dest)
-        _ = [print(s) for s in snaps[start_index:]]
+        snaps = backups.restic_inst.get_snapshots(args.dest)
+        _ = [print(s) for s in snaps[snapshot_ct:]]
 
 
 def parse_args():
     """Build arg-parser and parse args"""
     parser = argparse.ArgumentParser(prog="EZ-Restic")
+    parser.add_argument("--config-file", type=Path)
     subs = parser.add_subparsers(title="cmd")
+
+    # Run subcommand
     run = subs.add_parser("run", description="Runs the backup")
     run.add_argument(
         "--source", "-s", type=str, help="Status of all destinations for a source"
     )
-    run.set_defaults(func=run_all_backups)
+    run.set_defaults(id="run all")
+
+    # status subcommand
     status = subs.add_parser("status", description="Prints to status of restic repo(s)")
     status.add_argument(
         "--source", "-s", type=str, help="Status of all destinations for a source"
     )
     status.add_argument("--dest", "-d", type=str, help="Status of a single repo")
-    status.add_argument(
-        "--verbose", "-v", action="store_true", help="Status of a single repo"
-    )
-    status.set_defaults(func=get_status)
-
+    status.add_argument("--verbose", "-v", action="store_true")
+    status.set_defaults(id="status")
     args = parser.parse_args()
     return args
 
 
 def main():
     """Main Entrypoint"""
-    config_file = Path("backups.toml")
-    sources, pass_file = load_config(config_file)
-
-    restic = EZRestic(pass_file)
-
     args = parse_args()
+
+    if args.config_file:
+        config_file = args.config_file
+    else:
+        config_file = Path("backups.toml")
+    backups = BackupList.from_config(config_file.read_text())
+
     # run the specified function, providing the restic instance and sources
-    args.func(args, sources, restic)
+    match args.id:
+        case "run all":
+            backups.run_all_backups()
+        case "status":
+            get_status(args, backups)
+        case _:
+            backups.run_all_backups()
 
 
 if __name__ == "__main__":
