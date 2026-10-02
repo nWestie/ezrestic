@@ -111,7 +111,7 @@ class Snapshot:
         ret += f"- paths: {', '.join(self.paths)}\n"
         if self.tags:
             ret += f"- tags: {', '.join(self.tags)}\n"
-        ret += self.summary.short_print() + "\n"
+        ret += self.summary.short_print()
         return ret
 
 
@@ -337,6 +337,22 @@ class EZRestic:
         res = self._call_restic(repo, ["prune"])
         return res.stdout.decode("utf-8")
 
+    def repo_stats_printout(
+        self, repo: str, include_recent_snaps: bool | int = True
+    ) -> str:
+        stats = self.get_stats(repo)
+        if include_recent_snaps:
+            snaps = self.get_snapshots(repo)
+        res = f"--- Repo: {repo} ---\n"
+        res += str(stats)
+        if include_recent_snaps:
+            res += "\n"
+            # cannot check isinstance(_, int) as bool subclasses int
+            if not isinstance(include_recent_snaps, bool):
+                snaps = snaps[-include_recent_snaps:]
+            res += "\n".join(str(s) for s in snaps)
+        return res
+
     def _check_repo_exists(self, dest_repo: str) -> bool:
         """Raises exception if repo does not exist"""
         try:
@@ -418,12 +434,9 @@ class Source:
         except subp.CalledProcessError as e:
             print(f"Error {e.returncode}: {e.output}")
 
-    def get_repo_statuses(self, restic: EZRestic, count_last_snaps=0):
-        """lists snapshots stored in each destination."""
-        for dest in self.dests:
-            print(f"---Dest: {dest}---")
-            snaps = restic.get_snapshots(dest)
-            _ = [print(s) for s in snaps[-count_last_snaps:]]
+    def get_repo_statuses(self, restic: EZRestic, **kwargs) -> str:
+        """returns a string printout of the status of each configured repo."""
+        return "\n".join(restic.repo_stats_printout(d, **kwargs) for d in self.dests)
 
     def _call_shell_action(self, action: list[str], working_dir=None) -> bool:
         """runs pre/post action (space delimited )"""
@@ -459,9 +472,9 @@ class BackupList:
 
 def get_status(args, backups: BackupList):
     """called by 'status' command. gets status(es) of repo(s)"""
-    snapshot_ct = 0 if args.verbose else 5
+    snapshot_ct = True if args.verbose else 3
     if args.source and (s := backups.sources.get(args.source)):
-        s.get_repo_statuses(backups.restic_inst, snapshot_ct)
+        s.get_repo_statuses(backups.restic_inst, include_recent_snapshots=snapshot_ct)
     if args.dest:
         snaps = backups.restic_inst.get_snapshots(args.dest)
         _ = [print(s) for s in snaps[snapshot_ct:]]
