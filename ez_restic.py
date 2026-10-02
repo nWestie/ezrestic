@@ -65,12 +65,12 @@ class SnapshotStats:
         }
         return cls(**data)
 
-    def summary(self) -> str:
+    def short_print(self) -> str:
         tot_size = size_fmt(self.total_bytes_processed)
         added_size = size_fmt(self.data_added_packed)
         res = f"- Snapshot Size: {tot_size} (unpacked)\n"
         res += f"- Bytes Added: {added_size}\n"
-        res += f"- Files Added: {self.files_new} - Changed: {self.files_changed}\n"
+        res += f"- Files Added: {self.files_new} - Changed: {self.files_changed}"
         return res
 
 
@@ -111,7 +111,7 @@ class Snapshot:
         ret += f"- paths: {', '.join(self.paths)}\n"
         if self.tags:
             ret += f"- tags: {', '.join(self.tags)}\n"
-        ret += self.summary.summary() + "\n"
+        ret += self.summary.short_print() + "\n"
         return ret
 
 
@@ -123,12 +123,19 @@ class ForgetResult:
     kept: list[tuple[Snapshot, list[str]]]
 
     @classmethod
-    def from_json(cls, data: dict[str, Any]) -> "ForgetResult":
-        kept_snaps = [Snapshot.from_json(s) for s in data.get("keep", [])]
-        kept_reasons: list[list[str]] = [s for s in data.get("reasons", [])]
+    def from_json(cls, data: list[dict[str, Any]]) -> "ForgetResult":
+        kept_snaps = []
+        kept_reasons: list[list[str]] = []
+        removed: list[Snapshot] = []
+        for block in data:
+            kept_snaps.extend(
+                [Snapshot.from_json(s) for s in (block.get("keep") or [])]
+            )
+            kept_reasons.extend([s["matches"] for s in (block.get("reasons") or [])])
+            removed.extend([Snapshot.from_json(s) for s in (block.get("remove") or [])])
         out_data = {
-            "removed": [Snapshot.from_json(s) for s in data.get("remove", [])],
             "kept": list(zip(kept_snaps, kept_reasons)),
+            "removed": removed,
         }
         return cls(**out_data)
 
@@ -142,7 +149,7 @@ class ForgetResult:
         if len(self.kept):
             repr_str += "Keeping:\n"
             for snap, reasons in self.kept:
-                repr_str += f"- {snap} - kept as: {', '.join(reasons)}"
+                repr_str += f"- Snapshot {snap.id}\n   kept as: {', '.join(reasons)}\n"
         return repr_str
 
 
@@ -202,6 +209,7 @@ class CheckResult:
 @dataclass(frozen=True)
 class ResticError(ValueError):
     restic_errs: ClassVar[dict[int, str]] = {
+        -1: "Unknown Error",
         0: "Command was successful",
         1: "Command failed, see command help for more details",
         2: "Go runtime error",
@@ -286,14 +294,16 @@ class EZRestic:
         obj |= sz_obj
         return RepoStatsResult.from_json(obj)
 
-    def do_backup(self, dest_repo: str, source_dir: str) -> None:
+    def do_backup(self, dest_repo: str, source_dir: Path) -> SnapshotStats:
         """Calls restic to backup a source to a single destination"""
         self._check_repo_exists(dest_repo)
 
-        res = self._call_restic(dest_repo, ["backup", source_dir])
+        res = self._call_restic(dest_repo, ["backup", str(source_dir.absolute())])
         line = res.stdout.decode().splitlines()[-1]
-        summary = SnapshotStats(**json.loads(line))
-        print("Success -", summary.summary())
+        data = json.loads(line)
+        for key in ["total_duration", "message_type", "snapshot_id"]:
+            del data[key]
+        return SnapshotStats.from_json(data)
 
     def do_check(self, repo) -> CheckResult:
         """Check repo status, returns suggusted prune/repair. May throw ResticError"""
@@ -309,7 +319,15 @@ class EZRestic:
         # (mostly to make immich prune properly)
         res = self._call_restic(
             repo,
-            [f"--keep-weekly {weekly}", "--keep-monthly {monthly}", "--group-by host"],
+            [
+                "forget",
+                "--keep-weekly",
+                str(weekly),
+                "--keep-monthly",
+                str(monthly),
+                "--group-by",
+                "host",
+            ],
         )
         obj = json.loads(res.stdout.decode("utf-8"))
         return ForgetResult.from_json(obj)
@@ -353,34 +371,52 @@ class Source:
     One source, multiple desitnations, with pre/post actions"""
 
     name: str
-    source_dir: str
+    source_dir: Path
     dests: list[str]
     preaction: list[str] | None = None
     postaction: list[str] | None = None
-    ignore_files: list[str] = field(default_factory=list)
+    ignore_files: list[Path] = field(default_factory=list)
 
     @classmethod
     def from_toml(cls, name, data: dict[str, Any]) -> "Source":
         """constructs a source from it's Toml representation in the config file"""
+        data = {
+            **data,
+            "source_dir": Path(data["source_dir"]).absolute(),
+        }
         ignore = data.pop("ignore_file", None)
         if ignore:
-            ignore = Path(data["source_dir"]).joinpath(ignore).absolute()
+            ignore = data["source_dir"].joinpath(ignore).resolve()
             data["ignore_files"] = [str(ignore)]
         return cls(name, **data)
 
-    def run_backups(self, restic_instance: EZRestic):
-        """Runs preaction, backups, and postaction for this source"""
+    def run_backups(self, restic_instance: EZRestic, prune=False):
+        """Runs preaction, backups, and postaction for this source.
+        Pre/post actions are run with source dir as the working dir."""
         try:
             if self.preaction:
-                self._call_shell_action(self.preaction)
+                self._call_shell_action(self.preaction, self.source_dir)
             for dest in self.dests:
-                restic_instance.do_backup(dest, self.source_dir)
+                try:
+                    snap_stats = restic_instance.do_backup(dest, self.source_dir)
+                    stats = restic_instance.get_stats(dest)
+                    if prune:
+                        prune_res = restic_instance.do_forget(dest)
+                        restic_instance.do_prune(dest)
+                    print("Success:", dest)
+                    print(snap_stats.short_print())
+                    if prune:
+                        print(f"- pruned {len(prune_res.removed)} snapshots")
+                    print("- Snapshots Stored:", stats.snapshots_count)
+                    print("- Repo Size:", size_fmt(stats.stored_size))
+                except ResticError as e:
+                    print("FAILED to backup:", dest)
+                    print(e)
+                print()
             if self.postaction:
-                self._call_shell_action(self.postaction)
+                self._call_shell_action(self.postaction, self.source_dir)
         except subp.CalledProcessError as e:
             print(f"Error {e.returncode}: {e.output}")
-        except ResticError as e:
-            print(e)
 
     def get_repo_statuses(self, restic: EZRestic, count_last_snaps=0):
         """lists snapshots stored in each destination."""
@@ -389,9 +425,9 @@ class Source:
             snaps = restic.get_snapshots(dest)
             _ = [print(s) for s in snaps[-count_last_snaps:]]
 
-    def _call_shell_action(self, action: list[str]) -> bool:
+    def _call_shell_action(self, action: list[str], working_dir=None) -> bool:
         """runs pre/post action (space delimited )"""
-        subp.run(action, check=True)
+        subp.run(action, check=True, cwd=working_dir)
         return True
 
 
