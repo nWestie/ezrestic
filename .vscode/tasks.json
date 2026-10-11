@@ -14,7 +14,7 @@
         {
             "label": "run tests",
             "type": "shell",
-            "command": "pytest",
+            "command": "uv run pytest -- --verbose",
             "problemMatcher": [
                 "$python"
             ]

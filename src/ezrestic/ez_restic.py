@@ -453,20 +453,35 @@ class BackupList:
     restic_inst: EZRestic
     sources: MappingProxyType[str, Source]
 
+    @dataclass(frozen=True)
+    class LoadingError(Exception):
+        message: str
+
     @classmethod
-    def from_config(cls, config_text: str) -> "BackupList":
-        config = tomllib.loads(config_text)
-        pass_file = config.pop("restic_pass_file")
-        restic_path = config.pop("restic_path", "restic")
-        pass_file = str(Path(pass_file).absolute())
+    def from_config_file(cls, config_file: Path) -> "BackupList":
+        try:
+            config = tomllib.loads(config_file.read_text())
+            pass_file: Path = config_file.parent / config.pop("restic_pass_file")
+            restic_path = config.pop("restic_path", "restic")
+            if restic_path != "restic":
+                restic_path = str(config_file.parent / restic_path)
+            restic = EZRestic(str(pass_file.resolve()), restic_path)
 
-        restic = EZRestic(pass_file, restic_path)
-
-        src: dict[str, dict] = config.pop("src")
-        sources: dict[str, Source] = {}
-        for name, data in src.items():
-            sources[name] = Source.from_toml(name, data)
-        return cls(restic, MappingProxyType(sources))
+            src: dict[str, dict] = config.pop("src")
+            sources: dict[str, Source] = {}
+            for name, data in src.items():
+                sources[name] = Source.from_toml(name, data)
+            return cls(restic, MappingProxyType(sources))
+        except FileNotFoundError:
+            raise BackupList.LoadingError(
+                f"No config file found at {config_file.resolve()}"
+            )
+        except tomllib.TOMLDecodeError as e:
+            raise BackupList.LoadingError(f"Failed to load config file:\n{e}")
+        except KeyError as e:
+            raise BackupList.LoadingError(
+                f"Failed to load config file:\nMissing field: {e}"
+            )
 
     def run_all_backups(self):
         """called by 'run' command"""
@@ -490,7 +505,7 @@ def get_status(args, backups: BackupList):
 def parse_args():
     """Build arg-parser and parse args"""
     parser = argparse.ArgumentParser(prog="EZ-Restic")
-    parser.add_argument("--config-file", type=Path)
+    parser.add_argument("-c", "--config-file", type=Path)
     subs = parser.add_subparsers(title="cmd")
 
     # Run subcommand
@@ -552,13 +567,10 @@ def main():
         config_file = Path("backups.toml")
         print("Warn: falling back to default config file")
     try:
-        backups = BackupList.from_config(config_file.read_text())
-    except FileNotFoundError:
-        eprint(f"No config file found at {config_file.resolve()}")
-        return
-    except tomllib.TOMLDecodeError as e:
-        eprint(f"Failed to load config file:\n{e}")
-        return
+        backups = BackupList.from_config_file(config_file)
+    except BackupList.LoadingError as e:
+        eprint(e.message)
+        sys.exit()
 
     # run the specified function, providing the restic instance and sources
     match args.id:

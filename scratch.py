@@ -4,7 +4,7 @@ from subprocess import CompletedProcess
 
 import src.ezrestic.ez_restic as ez_restic
 
-backups = ez_restic.BackupList.from_config(Path("test_json/backups.toml").read_text())
+backups = ez_restic.BackupList.from_config_file(Path("test_json/backups.toml").read_text())
 restic = backups.restic_inst
 demo_repo = backups.sources["demo"].dests[0]
 dne_repo = backups.sources["dne"].dests[0]
