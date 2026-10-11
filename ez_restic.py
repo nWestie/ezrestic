@@ -415,10 +415,10 @@ class Source:
             for dest in self.dests:
                 try:
                     snap_stats = restic_instance.do_backup(dest, self.source_dir)
-                    stats = restic_instance.get_stats(dest)
                     if prune:
                         prune_res = restic_instance.do_forget(dest)
                         restic_instance.do_prune(dest)
+                    stats = restic_instance.get_stats(dest)
                     print("Success:", dest)
                     print(snap_stats.short_print())
                     if prune:
@@ -487,19 +487,49 @@ def parse_args():
     subs = parser.add_subparsers(title="cmd")
 
     # Run subcommand
-    run = subs.add_parser("run", description="Runs the backup")
-    run.add_argument(
-        "--source", "-s", type=str, help="Status of all destinations for a source"
+    run = subs.add_parser("backup", description="Run a backup")
+    run_group = run.add_mutually_exclusive_group(required=True)
+    run_group.add_argument(
+        "--source",
+        "-s",
+        type=str,
+        help="backs up only a single repo from config",
     )
-    run.set_defaults(id="run all")
+    run_group.add_argument(
+        "--all",
+        "-a",
+        action="store_true",
+        help="backs up all repos listed in the config",
+    )
+    run.add_argument(
+        "--no-prune",
+        action="store_true",
+        help="skip the pruning stage after backup",
+    )
+    run.set_defaults(id="backup")
 
     # status subcommand
-    status = subs.add_parser("status", description="Prints to status of restic repo(s)")
-    status.add_argument(
-        "--source", "-s", type=str, help="Status of all destinations for a source"
+    status = subs.add_parser(
+        "status",
+        description="Prints to status of restic repo(s)",
     )
-    status.add_argument("--dest", "-d", type=str, help="Status of a single repo")
-    status.add_argument("--verbose", "-v", action="store_true")
+    status.add_argument(
+        "--source",
+        "-s",
+        type=str,
+        help="Status of all destinations for a source",
+    )
+    status.add_argument(
+        "--dest",
+        "-d",
+        type=str,
+        help="Status of a single repo",
+    )
+    status.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+    )
     status.set_defaults(id="status")
     args = parser.parse_args()
     return args
@@ -517,8 +547,14 @@ def main():
 
     # run the specified function, providing the restic instance and sources
     match args.id:
-        case "run all":
-            backups.run_all_backups()
+        case "backup":
+            if args.all:
+                backups.run_all_backups()
+            else:
+                backups.sources[args.source].run_backups(
+                    backups.restic_inst,
+                    prune=(not args.no_prune),
+                )
         case "status":
             get_status(args, backups)
         case _:
