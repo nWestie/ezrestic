@@ -1,5 +1,3 @@
-print(f"Importing {__name__}")
-
 import argparse
 import json
 import subprocess as subp
@@ -484,6 +482,9 @@ def get_status(args, backups: BackupList):
     if args.dest:
         snaps = backups.restic_inst.get_snapshots(args.dest)
         _ = [print(s) for s in snaps[snapshot_ct:]]
+    else:
+        for source in backups.sources.values():
+            source.get_repo_statuses(backups.restic_inst)
 
 
 def parse_args():

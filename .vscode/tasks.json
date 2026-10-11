@@ -14,7 +14,10 @@
         {
             "label": "run tests",
             "type": "shell",
-            "command": "python ez_restic.py"
+            "command": "pytest",
+            "problemMatcher": [
+                "$python"
+            ]
         }
     ]
 }
