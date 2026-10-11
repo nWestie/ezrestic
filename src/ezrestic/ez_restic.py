@@ -1,3 +1,5 @@
+print(f"Importing {__name__}")
+
 import argparse
 import json
 import subprocess as subp
@@ -8,6 +10,11 @@ from datetime import datetime
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, ClassVar
+
+
+def eprint(*args, **kwargs):
+    """Prints to std_error"""
+    print(*args, file=sys.stderr, **kwargs)
 
 
 def size_fmt(num, suffix="B", binary=True):
@@ -347,8 +354,7 @@ class EZRestic:
         res += str(stats)
         if include_recent_snaps:
             res += "\n"
-            # cannot check isinstance(_, int) as bool subclasses int
-            if not isinstance(include_recent_snaps, bool):
+            if type(include_recent_snaps) == int:
                 snaps = snaps[-include_recent_snaps:]
             res += "\n".join(str(s) for s in snaps)
         return res
@@ -543,7 +549,15 @@ def main():
         config_file = args.config_file
     else:
         config_file = Path("backups.toml")
-    backups = BackupList.from_config(config_file.read_text())
+        print("Warn: falling back to default config file")
+    try:
+        backups = BackupList.from_config(config_file.read_text())
+    except FileNotFoundError:
+        eprint(f"No config file found at {config_file.resolve()}")
+        return
+    except tomllib.TOMLDecodeError as e:
+        eprint(f"Failed to load config file:\n{e}")
+        return
 
     # run the specified function, providing the restic instance and sources
     match args.id:

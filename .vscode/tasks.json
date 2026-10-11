@@ -6,7 +6,10 @@
         {
             "label": "run main",
             "type": "shell",
-            "command": "python ez_restic.py"
+            "command": "uv run ezrestic -- --config-file ./test_json/backups.toml",
+            "problemMatcher": [
+                "$python"
+            ]
         },
         {
             "label": "run tests",
