@@ -9,8 +9,8 @@ dests = ["./.dne", ".dne2"]
 [src.demo]
 source_dir = "."
 dests = ["../.demo_repo"]
-preaction = ["pwsh", "-c", "echo", "hello"]
-postaction = ["pwsh", "-c", "echo", "postaction"]
+preaction = ["pwsh", "-c", "echo", "I'ma preaction"]
+postaction = ["pwsh", "-c", "echo", "and I'm da postaction"]
 
 
 [src.immich]

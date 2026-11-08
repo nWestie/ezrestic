@@ -3,10 +3,10 @@ import json
 import subprocess as subp
 import sys
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
-from typing import Mapping
 
 import ezrestic.restic_types as rt
 
@@ -145,6 +145,7 @@ class Repository:
             raise
         return True
 
+
 @dataclass(frozen=True)
 class Source:
     """Represents a backup to be done, as stored in config.
@@ -165,13 +166,13 @@ class Source:
                 self._call_shell_action(self.preaction, self.source_dir)
             for dest in self.dests:
                 try:
-                    snap_stats = dest.backup(self.source_dir)
+                    backup_snap_stats = dest.backup(self.source_dir)
                     if prune:
                         prune_res = dest.forget()
                         dest.prune()
                     stats = dest.get_stats()
-                    print("Success:", dest)
-                    print(snap_stats.short_print())
+                    print("Success:", dest.locator)
+                    print(backup_snap_stats.short_print())
                     if prune:
                         print(f"- pruned {len(prune_res.removed)} snapshots")
                     print("- Snapshots Stored:", stats.snapshots_count)
@@ -189,9 +190,11 @@ class Source:
         """returns a string printout of the status of each configured repo."""
         return "\n".join(d.repo_stats_printout(**kwargs) for d in self.dests)
 
-    def _call_shell_action(self, action: list[str], working_dir=None) -> bool:
+    def _call_shell_action(
+        self, action: list[str], working_dir: Path | None = None
+    ) -> bool:
         """runs pre/post action (space delimited )"""
-        subp.run(action, check=True, cwd=working_dir)
+        subp.run(action, check=True, cwd=str(working_dir))
         return True
 
 
