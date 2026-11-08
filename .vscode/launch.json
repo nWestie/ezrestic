@@ -11,7 +11,7 @@
             "request": "launch",
             "console": "integratedTerminal",
             "program": "src/ezrestic/ez_restic.py",
-            "args": ["--config-file", ".gitignore"]
+            "args": ["--config-file", "test_json/bad_pass.toml", "status", "--dest", ".demo_repo"]
         }
     ]
 }

@@ -1,4 +1,5 @@
-restic_pass_file = "test_json/restic_pass"
+# should be relative to *this* config file
+restic_pass_file = "restic_pass"
 
 # Doesn't exist, for testing checks
 [src.dne]
@@ -12,8 +13,8 @@ preaction = ["pwsh", "-c", "echo", "hello"]
 postaction = ["pwsh", "-c", "echo", "postaction"]
 
 
-# [src.immich]
-# source_dir = "."
-# dests = ["rclone:opcbackup:immich"]
-# ignore_file = ".restic-ignore"
-# preaction = ["/home/westie/scripts/immich/immich_db_dump.sh"]
+[src.immich]
+source_dir = "."
+dests = ["rclone:opcbackup:immich"]
+ignore_file = ".restic-ignore"
+preaction = ["/home/westie/scripts/immich/immich_db_dump.sh"]
