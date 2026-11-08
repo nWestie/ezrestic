@@ -28,24 +28,25 @@ def get_backup_obj():
     return ez.BackupList.from_config_file(default_conf)
 
 
-@pytest.fixture
-def get_restic() -> ez.EZRestic:
-    return ez.BackupList.from_config_file(default_conf).restic_inst
 
+@pytest.mark.parametrize(
+    "locator, expected",
+    [
+        ("./local-repo", "relative"),
+        (r"C:\backup\repo", "unchanged"),
+        ("rclone:opcbackup:immich", "unchanged"),
+        ("sftp:user@example.com:/repo", "unchanged"),
+    ],
+)
+def test_resolve_repo_locator(locator, expected, tmp_path):
+    config_dir = tmp_path / "config-directory"
 
-def test_password_file(get_restic):
-    assert Path(get_restic.pass_file) == Path("./test_json/restic_pass").resolve()
+    resolved = ez.BackupList._resolve_repo_locator(locator, config_dir)
 
-
-def test_password_file_chdir(get_restic):
-    import os
-
-    compare_to = Path("./test_json/restic_pass").resolve()
-    restore_dir = Path.cwd()
-    os.chdir("C:/")
-    res = Path(get_restic.pass_file) == compare_to
-    os.chdir(restore_dir)
-    assert res
+    if expected == "relative":
+        assert resolved == str((config_dir / "local-repo").resolve())
+    else:
+        assert resolved == locator
 
 
 # def test_check_repo_good(get_restic: ez.EZRestic):

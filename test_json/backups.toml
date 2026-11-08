@@ -7,14 +7,14 @@ source_dir = "./dne"
 dests = ["./.dne", ".dne2"]
 
 [src.demo]
-source_dir = "./test_json"
-dests = ["./.demo_repo"]
+source_dir = "."
+dests = ["../.demo_repo"]
 preaction = ["pwsh", "-c", "echo", "hello"]
 postaction = ["pwsh", "-c", "echo", "postaction"]
 
 
 [src.immich]
-source_dir = "."
+source_dir = "./dne"
 dests = ["rclone:opcbackup:immich"]
 ignore_file = ".restic-ignore"
 preaction = ["/home/westie/scripts/immich/immich_db_dump.sh"]

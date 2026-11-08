@@ -175,7 +175,7 @@ class RepoStatsResult:
         res += f"- Compression: {self.compression_ratio:.2g}x\n"
         res += f"- Snapshots: {self.snapshots_count}\n"
         res += f"- Files: {files_format}\n"
-        res += f"- Restore Size: {restore_sz_fmt}"
+        res += f"- Restore Size: {restore_sz_fmt}\n"
         return res
 
 

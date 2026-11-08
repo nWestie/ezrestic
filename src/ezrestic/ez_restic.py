@@ -6,7 +6,7 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any
+from typing import Mapping
 
 import ezrestic.restic_types as rt
 
@@ -26,12 +26,12 @@ class EZRestic:
         if isinstance(cmd, str):
             cmd = [cmd]
         full_cmd = [
-            "restic",
+            self.restic_path,
             *cmd,
             "--password-file",
-            repo.password_file,
+            str(repo.password_file),
             "--repo",
-            repo,
+            repo.locator,
             "--json",
         ]
         res = subp.run(full_cmd, capture_output=True, check=False)
@@ -123,15 +123,16 @@ class Repository:
             # can be true or non-zero int
             if include_recent_snaps:
                 snaps = self.get_snapshots()
+            else:
+                snaps = []
         except rt.ResticError as e:
             return res + str(e)
 
         res += str(stats)
-        if include_recent_snaps:
-            res += "\n"
-            if type(include_recent_snaps) == int:
-                snaps = snaps[-include_recent_snaps:]
-            res += "\n".join(str(s) for s in snaps)
+        if type(include_recent_snaps) == int:
+            snaps = snaps[-include_recent_snaps:]
+            snaps.reverse()
+        res += "\n".join(str(s) for s in snaps)
         return res
 
     def _check_repo_exists(self) -> bool:
@@ -144,7 +145,6 @@ class Repository:
             raise
         return True
 
-
 @dataclass(frozen=True)
 class Source:
     """Represents a backup to be done, as stored in config.
@@ -152,39 +152,10 @@ class Source:
 
     name: str
     source_dir: Path
-    dests: list[Repository]
+    dests: tuple[Repository]
     preaction: list[str] | None = None
     postaction: list[str] | None = None
     ignore_files: list[Path] = field(default_factory=list)
-
-    @classmethod
-    def from_toml(
-        cls,
-        name,
-        data: dict[str, Any],
-        pass_file: Path,
-        restic: EZRestic,
-        config_dir: Path,
-    ) -> "Source":
-        """constructs a source from it's Toml representation in the config file"""
-        data = {
-            **data,
-            "source_dir": Path(data["source_dir"]).absolute(),
-        }
-        ignore = data.pop("ignore_file", None)
-        if ignore:
-            ignore = data["source_dir"].joinpath(ignore).resolve()
-            data["ignore_files"] = [str(ignore)]
-        dests = []
-        for loc in data.pop("dests"):
-            # if it's a local path, line it up
-            if loc.count(":")<2 and loc[0]!="/":
-                loc = Path(loc).relative_to(config_dir).absolute()
-                loc = str(loc)
-            dest = Repository(loc, pass_file, restic)
-            dests.append(dest)
-        data["dests"] = dests
-        return cls(name, **data)
 
     def run_backups(self, prune=False):
         """Runs preaction, backups, and postaction for this source.
@@ -228,7 +199,14 @@ class Source:
 class BackupList:
     # stored for late-init repos (ex. status)
     restic_inst: EZRestic
-    sources: MappingProxyType[str, Source]
+    sources: Mapping[str, Source]
+
+    def __post_init__(self):
+        object.__setattr__(
+            self,
+            "sources",
+            MappingProxyType(dict(self.sources)),
+        )
 
     @dataclass(frozen=True)
     class LoadingError(Exception):
@@ -237,19 +215,44 @@ class BackupList:
     @classmethod
     def from_config_file(cls, config_file: Path) -> "BackupList":
         try:
+            # read config from file
+            config_file = config_file.resolve()
             config = tomllib.loads(config_file.read_text())
-            pass_file: Path = config_file.parent / config.pop("restic_pass_file")
+            config_dir = config_file.parent
+
+            # get global configs
+            pass_file = cls._resolve_relative_to(
+                config_dir, config.pop("restic_pass_file")
+            )
             restic_path = config.pop("restic_path", "restic")
             if restic_path != "restic":
-                restic_path = str(config_file.parent / restic_path)
-            restic = EZRestic(restic_path)
+                restic_path = str(cls._resolve_relative_to(config_dir, restic_path))
+            restic = EZRestic(str(restic_path))
 
+            # load sources
             src: dict[str, dict] = config.pop("src")
             sources: dict[str, Source] = {}
             for name, data in src.items():
-                sources[name] = Source.from_toml(
-                    name, data, pass_file, restic, config_file.parent
+                source_dir = cls._resolve_relative_to(config_dir, data["source_dir"])
+                ignore_file = data.pop("ignore_file", None)
+                ignore_files = (
+                    [source_dir.joinpath(ignore_file).resolve()] if ignore_file else []
                 )
+                repositories = [
+                    Repository(
+                        cls._resolve_repo_locator(locator, config_dir),
+                        pass_file,
+                        restic,
+                    )
+                    for locator in data["dests"]
+                ]
+                source_data = {
+                    **data,
+                    "source_dir": source_dir,
+                    "dests": tuple(repositories),
+                    "ignore_files": ignore_files,
+                }
+                sources[name] = Source(name=name, **source_data)
             return cls(restic, MappingProxyType(sources))
         except FileNotFoundError:
             raise BackupList.LoadingError(
@@ -262,6 +265,20 @@ class BackupList:
                 f"Failed to load config file:\nMissing field: {e}"
             )
 
+    @staticmethod
+    def _resolve_relative_to(relative_to: Path, value: str | Path) -> Path:
+        path = Path(value)
+        if path.is_absolute():
+            return path
+        return (relative_to / path).resolve()
+
+    @staticmethod
+    def _resolve_repo_locator(locator: str, config_dir: Path) -> str:
+        path = Path(locator)
+        if path.is_absolute() or ":" in locator:
+            return locator
+        return str((config_dir / path).resolve())
+
     def run_all_backups(self):
         """called by 'run' command"""
         for source in self.sources.values():
@@ -272,16 +289,16 @@ def get_status(args, backups: BackupList):
     """called by 'status' command. gets status(es) of repo(s)"""
     snapshot_ct = True if args.verbose else 3
     if args.source and (s := backups.sources.get(args.source)):
-        print(s.all_repo_printouts(include_recent_snapshots=snapshot_ct))
+        print(s.all_repo_printouts(include_recent_snaps=snapshot_ct))
 
     elif args.dest:
-        for source in BackupList.sources.values():
+        for source in backups.sources.values():
             for dest in source.dests:
                 if dest.locator == args.dest:
                     print(dest.repo_stats_printout(include_recent_snaps=snapshot_ct))
                     return
         # if not found in the config
-        dest = Repository(args.dest, args.pass_file, BackupList.restic_inst)
+        dest = Repository(args.dest, args.pass_file, backups.restic_inst)
         print(dest.repo_stats_printout())
 
     else:
