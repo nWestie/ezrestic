@@ -1,6 +1,6 @@
 [project]
 name = "ezrestic"
-version = "0.6.0"
+version = "0.6.1"
 description = "A wrapper around restic to simplify running backups"
 readme = "README.md"
 authors = [{ name = "Noah", email = "westnoahb@gmail.com" }]

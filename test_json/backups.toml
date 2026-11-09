@@ -1,5 +1,5 @@
 # should be relative to *this* config file
-restic_pass_file = "restic_pass"
+restic_pass_file = "../secrets/restic_pass"
 
 # Doesn't exist, for testing checks
 [src.dne]
@@ -9,8 +9,9 @@ dests = ["./.dne", ".dne2"]
 [src.demo]
 source_dir = "."
 dests = ["../.demo_repo"]
-preaction = ["pwsh", "-c", "echo", "I'ma preaction"]
-postaction = ["pwsh", "-c", "echo", "and I'm da postaction"]
+ignore_file = ".restic-ignore"
+preaction = ["pwsh", "-c", "echo", "Ima preaction"]
+postaction = ["pwsh", "-c", "echo", "and Im da postaction"]
 
 
 [src.immich]

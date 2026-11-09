@@ -11,4 +11,4 @@ wheels/
 
 # Project-secific test artifacts
 .demo_repo
-restic_pass
+secrets

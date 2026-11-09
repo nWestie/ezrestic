@@ -73,11 +73,15 @@ class Repository:
         obj |= sz_obj
         return rt.RepoStatsResult.from_json(obj)
 
-    def backup(self, source_dir: Path) -> rt.SnapshotStats:
+    def backup(
+        self, source_dir: Path, ignore_file: Path | None = None
+    ) -> rt.SnapshotStats:
         """Calls restic to backup a source to a single destination"""
         self._check_repo_exists()
-
-        res = self.restic._call_on_repo(self, ["backup", str(source_dir.absolute())])
+        cmd = ["backup", str(source_dir.absolute())]
+        if ignore_file:
+            cmd.extend(["--exclude-file", str(ignore_file)])
+        res = self.restic._call_on_repo(self, cmd)
         line = res.stdout.decode().splitlines()[-1]
         data = json.loads(line)
         for key in ["total_duration", "message_type", "snapshot_id"]:
@@ -153,10 +157,10 @@ class Source:
 
     name: str
     source_dir: Path
-    dests: tuple[Repository]
+    dests: tuple[Repository, ...]
     preaction: list[str] | None = None
     postaction: list[str] | None = None
-    ignore_files: list[Path] = field(default_factory=list)
+    ignore_file: Path | None = None
 
     def run_backups(self, prune=False):
         """Runs preaction, backups, and postaction for this source.
@@ -166,25 +170,25 @@ class Source:
                 self._call_shell_action(self.preaction, self.source_dir)
             for dest in self.dests:
                 try:
-                    backup_snap_stats = dest.backup(self.source_dir)
+                    backup_snap_stats = dest.backup(self.source_dir, self.ignore_file)
+                    print("Successful Backup:", dest.locator)
+                    print(backup_snap_stats.short_print())
                     if prune:
                         prune_res = dest.forget()
                         dest.prune()
-                    stats = dest.get_stats()
-                    print("Success:", dest.locator)
-                    print(backup_snap_stats.short_print())
                     if prune:
                         print(f"- pruned {len(prune_res.removed)} snapshots")
+                    stats = dest.get_stats()
                     print("- Snapshots Stored:", stats.snapshots_count)
                     print("- Repo Size:", rt.size_fmt(stats.stored_size))
                 except rt.ResticError as e:
-                    print("FAILED to backup:", dest)
+                    print("FAILED to backup:", self.name)
                     print(e)
                 print()
             if self.postaction:
                 self._call_shell_action(self.postaction, self.source_dir)
         except subp.CalledProcessError as e:
-            print(f"Error {e.returncode}: {e.output}")
+            print(f"Error calling action: {e.args[1]}\n{e.returncode}: {e.output}")
 
     def all_repo_printouts(self, **kwargs) -> str:
         """returns a string printout of the status of each configured repo."""
@@ -236,26 +240,26 @@ class BackupList:
             src: dict[str, dict] = config.pop("src")
             sources: dict[str, Source] = {}
             for name, data in src.items():
-                source_dir = cls._resolve_relative_to(config_dir, data["source_dir"])
+                src_dir = data.pop("source_dir")
+                src_dir = cls._resolve_relative_to(config_dir, src_dir)
                 ignore_file = data.pop("ignore_file", None)
-                ignore_files = (
-                    [source_dir.joinpath(ignore_file).resolve()] if ignore_file else []
-                )
+                if ignore_file:
+                    ignore_file = cls._resolve_relative_to(src_dir, ignore_file)
                 repositories = [
                     Repository(
                         cls._resolve_repo_locator(locator, config_dir),
                         pass_file,
                         restic,
                     )
-                    for locator in data["dests"]
+                    for locator in data.pop("dests")
                 ]
-                source_data = {
+                sources[name] = Source(
+                    name=name,
+                    source_dir=src_dir,
+                    ignore_file=ignore_file,
+                    dests=tuple(repositories),
                     **data,
-                    "source_dir": source_dir,
-                    "dests": tuple(repositories),
-                    "ignore_files": ignore_files,
-                }
-                sources[name] = Source(name=name, **source_data)
+                )
             return cls(restic, MappingProxyType(sources))
         except FileNotFoundError:
             raise BackupList.LoadingError(
@@ -270,7 +274,8 @@ class BackupList:
 
     @staticmethod
     def _resolve_relative_to(relative_to: Path, value: str | Path) -> Path:
-        path = Path(value)
+        if type(value) != Path:
+            path = Path(value)
         if path.is_absolute():
             return path
         return (relative_to / path).resolve()
