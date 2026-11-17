@@ -306,7 +306,7 @@ def get_status(args, backups: BackupList):
             print(source.all_repo_printouts(include_recent_snaps=snapshot_ct))
 
 
-def parse_args():
+def build_parser():
     """Build arg-parser and parse args"""
     parser = argparse.ArgumentParser(prog="EZ-Restic")
     parser.add_argument("-c", "--config-file", type=Path)
@@ -362,13 +362,19 @@ def parse_args():
         action="store_true",
     )
     status.set_defaults(id="status")
-    args = parser.parse_args()
-    return args
+
+    return parser
 
 
 def main():
     """Main Entrypoint"""
-    args = parse_args()
+    parser = build_parser()
+    
+    if len(sys.argv) == 1:
+        parser.print_help()
+        parser.exit(0)
+    
+    args = parser.parse_args()
 
     if args.config_file:
         config_file = args.config_file
@@ -393,8 +399,6 @@ def main():
                 )
         case "status":
             get_status(args, backups)
-        case _:
-            backups.run_all_backups()
 
 
 if __name__ == "__main__":
