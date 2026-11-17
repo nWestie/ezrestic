@@ -17,6 +17,26 @@ def size_fmt(num, suffix="B", binary=True):
         num /= div
     return f"{num:.3g}Y{suffix}"
 
+
+def _load_json(text: str | bytes) -> dict[str, Any]:
+    """Parse the final JSON object emitted by a restic command."""
+    try:
+        if isinstance(text, bytes):
+            text = text.decode("utf-8")
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        raise ResticParseError("Restic Response is Invalid JSON", str(e)) from e
+
+
+def _load_json_lines(text: str | bytes) -> list[dict]:
+    try:
+        if isinstance(text, bytes):
+            text = text.decode("utf-8")
+        return [json.loads(line) for line in text.splitlines()]
+    except json.JSONDecodeError as e:
+        raise ResticParseError("Restic Response is Invalid JSON", str(e)) from e
+
+
 @dataclass(frozen=True)
 class ID:
     "An ID string that displays a shortened"
@@ -50,14 +70,24 @@ class SnapshotStats:
     total_bytes_processed: int  # Total number of bytes processed
 
     @classmethod
-    def from_json(cls, data) -> "SnapshotStats":
-        t_format = lambda str: datetime.fromisoformat(str)
+    def from_json(cls, data: dict[str, Any]) -> "SnapshotStats":
         data = {
             **data,
-            "backup_start": t_format(data["backup_start"]),
-            "backup_end": t_format(data["backup_end"]),
+            "backup_start": datetime.fromisoformat(data["backup_start"]),
+            "backup_end": datetime.fromisoformat(data["backup_end"]),
         }
         return cls(**data)
+
+    @classmethod
+    def from_backup_output(cls, output: bytes | str) -> "SnapshotStats":
+        try:
+            data = _load_json_lines(output.strip())
+            summary = next(d for d in data if d.get("message_type") == "summary")
+            for key in ("total_duration", "message_type", "snapshot_id"):
+                summary.pop(key, None)
+            return cls.from_json(summary)
+        except (KeyError, TypeError, ValueError, StopIteration) as e:
+            raise ResticParseError("Failed to parse backup result", str(e)) from e
 
     def short_print(self) -> str:
         tot_size = size_fmt(self.total_bytes_processed)
@@ -90,14 +120,24 @@ class Snapshot:
 
     @classmethod
     def from_json(cls, data) -> "Snapshot":
-        del data["short_id"]
         data = {
             **data,
             "time": datetime.fromisoformat(data["time"]),
             "summary": SnapshotStats.from_json(data["summary"]),
             "id": ID(data["id"]),
         }
+        data.pop("short_id", None)
         return cls(**data)
+
+    @classmethod
+    def list_from_output(cls, output: bytes | str) -> list["Snapshot"]:
+        try:
+            value = _load_json(output)
+            if not isinstance(value, list):
+                raise TypeError("Expected a JSON array")
+            return [cls.from_json(snapshot) for snapshot in value]
+        except (KeyError, TypeError, ValueError) as e:
+            raise ResticParseError("Failed to parse snapshots result", str(e)) from e
 
     def __repr__(self) -> str:
         ret = f"Snapshot {self.id}: {self.time.strftime('%Y-%m-%d %H:%M')}\n"
@@ -133,6 +173,17 @@ class ForgetResult:
         }
         return cls(**out_data)
 
+    @classmethod
+    def from_output(cls, output: bytes | str) -> "ForgetResult":
+        try:
+            value = _load_json(output)
+
+            if not isinstance(value, list):
+                raise TypeError("Expected a JSON array")
+            return cls.from_json(value)
+        except (KeyError, TypeError, ValueError) as e:
+            raise ResticParseError("Failed to parse forget result", str(e)) from e
+
     def __repr__(self) -> str:
         repr_str = ""
         if len(self.removed):
@@ -163,6 +214,20 @@ class RepoStatsResult:
     def from_json(cls, data: dict[str, Any]) -> "RepoStatsResult":
         return cls(**data)
 
+    @classmethod
+    def from_stats_output(
+        cls, stats_output: bytes | str, raw_data_output: bytes | str
+    ) -> "RepoStatsResult":
+        try:
+            stats = _load_json(stats_output)
+            if isinstance(raw_data_output, bytes):
+                raw_data_output = raw_data_output.decode("utf-8")
+            raw_data = json.loads(raw_data_output)
+            raw_data["stored_size"] = raw_data.pop("total_size")
+            return cls.from_json(stats | raw_data)
+        except (KeyError, TypeError, ValueError) as e:
+            raise ResticParseError("Failed to parse stats result", str(e)) from e
+
     def __repr__(self) -> str:
         restore_sz_fmt = size_fmt(self.total_size)
         stored_sz_fmt = size_fmt(self.stored_size)
@@ -191,8 +256,19 @@ class CheckResult:
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "CheckResult":
-        del data["message_type"]
+        data = {**data}
+        data.pop("message_type", None)
+        if data.get("broken_packs") is None:
+            data["broken_packs"] = []
         return cls(**data)
+
+    @classmethod
+    def from_output(cls, output: bytes | str) -> "CheckResult":
+        try:
+            check = _load_json(output)
+            return cls.from_json(check)
+        except (KeyError, TypeError, ValueError) as e:
+            raise ResticParseError("Failed to parse check result", str(e)) from e
 
     def is_good(self) -> bool:
         good = (self.num_errors == 0) and len(self.broken_packs) == 0
@@ -203,7 +279,6 @@ class CheckResult:
 @dataclass(frozen=True)
 class ResticError(ValueError):
     restic_errs: ClassVar[dict[int, str]] = {
-        -1: "Unknown Error",
         0: "Command was successful",
         1: "Command failed, see command help for more details",
         2: "Go runtime error",
@@ -219,16 +294,18 @@ class ResticError(ValueError):
 
     @property
     def sys_message(self):
-        return self.restic_errs[self.code]
+        return self.restic_errs.get(self.code, "Unknown Error")
 
     @classmethod
-    def from_cli(cls, res: subp.CompletedProcess[bytes]):
+    def from_process(cls, res: subp.CompletedProcess[bytes]):
         """Build error from restic return"""
-        text = res.stderr.decode()
-        lines = text.splitlines()
+        text = res.stderr.decode("utf-8", errors="replace")
         try:
+            lines = text.strip().splitlines()
             obj = json.loads(lines[-1])
-            del obj["message_type"]
+            if not isinstance(obj, dict):
+                raise TypeError("Expected a JSON object")
+            obj.pop("message_type", None)
             obj = {**obj, "ext_message": "\n".join(lines[:-1])}
             if obj["code"] == 10:
                 # This is a code smell, it should probably
@@ -236,8 +313,8 @@ class ResticError(ValueError):
                 # that, but I'm not about that life, it's fine
                 return ResticRepoNotFoundError(**obj)
             return cls(**obj)
-        except ValueError:
-            return cls(-1, text, "")
+        except (KeyError, TypeError, ValueError, IndexError):
+            return ResticParseError("Failed to Build Restic Error", text)
 
     def __str__(self):
         return (
@@ -245,6 +322,20 @@ class ResticError(ValueError):
             + f"{self.message}\n"
             + (f"Other Codes:\n{self.ext_message}" if self.ext_message else "")
         )
+
+
+class ResticParseError(ResticError):
+    """Restic output was successful but did not match the expected schema."""
+
+    def __init__(self, message: str, ext_message: str = ""):
+        super().__init__(-1, message, ext_message)
+
+
+class ResticCommandError(ResticError):
+    """The Restic executable could not be started or invoked."""
+
+    def __init__(self, message: str, ext_message: str = ""):
+        super().__init__(-1, message, ext_message)
 
 
 class ResticRepoNotFoundError(ResticError):

@@ -1,5 +1,4 @@
 import argparse
-import json
 import subprocess as subp
 import sys
 import tomllib
@@ -34,9 +33,14 @@ class EZRestic:
             repo.locator,
             "--json",
         ]
-        res = subp.run(full_cmd, capture_output=True, check=False)
+        try:
+            res = subp.run(full_cmd, capture_output=True, check=False)
+        except OSError as e:
+            raise rt.ResticCommandError(
+                f"Failed to invoke Restic executable: {self.restic_path}", str(e)
+            ) from e
         if res.returncode != 0:
-            raise rt.ResticError.from_cli(res)
+            raise rt.ResticError.from_process(res)
         return res
 
 
@@ -61,17 +65,12 @@ class Repository:
         if not filters:
             filters = []
         res = self.restic._call_on_repo(self, ["snapshots", *filters])
-        obj = json.loads(res.stdout.decode())
-        return [rt.Snapshot.from_json(snap) for snap in obj]
+        return rt.Snapshot.list_from_output(res.stdout)
 
     def get_stats(self) -> rt.RepoStatsResult:
         res = self.restic._call_on_repo(self, ["stats"])
         res_size = self.restic._call_on_repo(self, ["stats", "--mode", "raw-data"])
-        obj: dict = json.loads(res.stdout.decode())
-        sz_obj: dict = json.loads(res_size.stdout.decode())
-        sz_obj["stored_size"] = sz_obj.pop("total_size")
-        obj |= sz_obj
-        return rt.RepoStatsResult.from_json(obj)
+        return rt.RepoStatsResult.from_stats_output(res.stdout, res_size.stdout)
 
     def backup(
         self, source_dir: Path, ignore_file: Path | None = None
@@ -82,17 +81,12 @@ class Repository:
         if ignore_file:
             cmd.extend(["--exclude-file", str(ignore_file)])
         res = self.restic._call_on_repo(self, cmd)
-        line = res.stdout.decode().splitlines()[-1]
-        data = json.loads(line)
-        for key in ["total_duration", "message_type", "snapshot_id"]:
-            del data[key]
-        return rt.SnapshotStats.from_json(data)
+        return rt.SnapshotStats.from_backup_output(res.stdout)
 
     def check(self) -> rt.CheckResult:
         """Check repo status, returns suggusted prune/repair. May throw ResticError"""
         res = self.restic._call_on_repo(self, ["check"])
-        obj = json.loads(res.stdout.decode("utf-8"))
-        return rt.CheckResult.from_json(obj)
+        return rt.CheckResult.from_output(res.stdout)
 
     def forget(self, weekly=4, monthly=6) -> rt.ForgetResult:
         """Delete old backups according to a keep-scheme"""
@@ -112,8 +106,7 @@ class Repository:
                 "host",
             ],
         )
-        obj = json.loads(res.stdout.decode("utf-8"))
-        return rt.ForgetResult.from_json(obj)
+        return rt.ForgetResult.from_output(res.stdout)
 
     def prune(self) -> str:
         """Runs prune - returns raw output. TODO: No good way to parse it currently."""
@@ -274,8 +267,7 @@ class BackupList:
 
     @staticmethod
     def _resolve_relative_to(relative_to: Path, value: str | Path) -> Path:
-        if type(value) != Path:
-            path = Path(value)
+        path = Path(value)
         if path.is_absolute():
             return path
         return (relative_to / path).resolve()
