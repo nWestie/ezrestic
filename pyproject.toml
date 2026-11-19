@@ -5,7 +5,9 @@ description = "A wrapper around restic to simplify running backups"
 readme = "README.md"
 authors = [{ name = "Noah", email = "westnoahb@gmail.com" }]
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "typer>=0.29.2",
+]
 
 [dependency-groups]
 dev = ["pytest>=9.1.1"]

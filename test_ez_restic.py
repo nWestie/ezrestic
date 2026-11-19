@@ -1,7 +1,7 @@
+from collections.abc import Callable
 from contextlib import nullcontext as doesnt_raise
 from pathlib import Path
 from subprocess import CompletedProcess
-from typing import Callable
 
 import pytest
 
