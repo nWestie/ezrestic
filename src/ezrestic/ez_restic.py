@@ -1,11 +1,13 @@
-import argparse
 import subprocess as subp
 import sys
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
+from typing import Annotated
+
+import typer
 
 import ezrestic.restic_types as rt
 
@@ -285,100 +287,42 @@ class BackupList:
             source.run_backups()
 
 
-def get_status(args, backups: BackupList):
-    """called by 'status' command. gets status(es) of repo(s)"""
-    snapshot_ct = True if args.verbose else 3
-    if args.source and (s := backups.sources.get(args.source)):
-        print(s.all_repo_printouts(include_recent_snaps=snapshot_ct))
-
-    elif args.dest:
-        for source in backups.sources.values():
-            for dest in source.dests:
-                if dest.locator == args.dest:
-                    print(dest.repo_stats_printout(include_recent_snaps=snapshot_ct))
-                    return
-        # if not found in the config
-        dest = Repository(args.dest, args.pass_file, backups.restic_inst)
-        print(dest.repo_stats_printout())
-
-    else:
-        for source in backups.sources.values():
-            print(source.all_repo_printouts(include_recent_snaps=snapshot_ct))
+def get_source_status(backups: BackupList, source: str, verbose: bool) -> None:
+    """Print the status of every repository configured for a source."""
+    configured_source = backups.sources.get(source)
+    if configured_source is None:
+        raise typer.BadParameter(f"unknown source: {source}", param_hint="--source")
+    snapshot_ct = True if verbose else 3
+    print(configured_source.all_repo_printouts(include_recent_snaps=snapshot_ct))
 
 
-def build_parser():
-    """Build arg-parser and parse args"""
-    parser = argparse.ArgumentParser(prog="EZ-Restic")
-    parser.add_argument("-c", "--config-file", type=Path)
-    subs = parser.add_subparsers(title="cmd")
-
-    # Run subcommand
-    run = subs.add_parser("backup", description="Run a backup")
-    run_group = run.add_mutually_exclusive_group(required=True)
-    run_group.add_argument(
-        "--source",
-        "-s",
-        type=str,
-        help="backs up only a single repo from config",
-    )
-    run_group.add_argument(
-        "--all",
-        "-a",
-        action="store_true",
-        help="backs up all repos listed in the config",
-    )
-    run.add_argument(
-        "--no-prune",
-        action="store_true",
-        help="skip the pruning stage after backup",
-    )
-    run.set_defaults(id="backup")
-
-    # status subcommand
-    status = subs.add_parser(
-        "status",
-        description="Prints to status of restic repo(s)",
-    )
-    status.add_argument(
-        "--source",
-        "-s",
-        type=str,
-        help="Status of all destinations for a source",
-    )
-    status.add_argument(
-        "--dest",
-        "-d",
-        type=str,
-        help="Status of a single repo",
-    )
-    status.add_argument(
-        "--pass_file",
-        type=str,
-        help="path to password file for a repo dest",
-    )
-    status.add_argument(
-        "--verbose",
-        "-v",
-        action="store_true",
-    )
-    status.set_defaults(id="status")
-
-    return parser
+def get_dest_status(
+    backups: BackupList, dest: str, pass_file: Path, verbose: bool
+) -> None:
+    """Print the status of one repository using the supplied password file."""
+    snapshot_ct = True if verbose else 3
+    repository = Repository(dest, pass_file, backups.restic_inst)
+    print(repository.repo_stats_printout(include_recent_snaps=snapshot_ct))
 
 
-def main():
-    """Main Entrypoint"""
-    parser = build_parser()
-    
-    if len(sys.argv) == 1:
-        parser.print_help()
-        parser.exit(0)
-    
-    args = parser.parse_args()
+app = typer.Typer(name="EZ-Restic", no_args_is_help=True)
 
-    if args.config_file:
-        config_file = args.config_file
-    else:
+
+@app.callback()
+def cli(
+    ctx: typer.Context,
+    config_file: Annotated[
+        Path | None,
+        typer.Option("-c", "--config-file", help="Path to the backup configuration."),
+    ] = None,
+) -> None:
+    """Configure and run backups with Restic."""
+    ctx.ensure_object(dict)["config_file"] = config_file
+
+
+def _load_backups(ctx: typer.Context) -> BackupList:
+    config_file: Path | None = ctx.obj["config_file"]
+    if config_file is None:
         config_file = Path("backups.toml")
         print("Warn: falling back to default config file:")
         print(" ", config_file.absolute())
@@ -386,20 +330,105 @@ def main():
         backups = BackupList.from_config_file(config_file)
     except BackupList.LoadingError as e:
         eprint(e.message)
-        sys.exit()
+        raise typer.Exit(1) from e
+    return backups
 
-    # run the specified function, providing the restic instance and sources
-    match args.id:
-        case "backup":
-            if args.all:
-                backups.run_all_backups()
-            else:
-                backups.sources[args.source].run_backups(
-                    prune=(not args.no_prune),
-                )
-        case "status":
-            get_status(args, backups)
+
+@app.command("backup")
+def backup_command(
+    ctx: typer.Context,
+    source: Annotated[
+        str | None,
+        typer.Option(
+            "--source",
+            "-s",
+            help="Back up only a single source from the configuration.",
+        ),
+    ] = None,
+    all_sources: Annotated[
+        bool,
+        typer.Option(
+            "--all",
+            "-a",
+            help="Back up all sources listed in the configuration.",
+        ),
+    ] = False,
+    no_prune: Annotated[
+        bool,
+        typer.Option("--no-prune", help="Skip the pruning stage after backup."),
+    ] = False,
+) -> None:
+    """Run a backup."""
+    if source is not None and all_sources:
+        raise typer.BadParameter(
+            "--source and --all cannot be used together",
+            param_hint="--source/--all",
+        )
+    if source is None and not all_sources:
+        raise typer.BadParameter(
+            "exactly one of --source or --all is required",
+            param_hint="--source/--all",
+        )
+
+    backups = _load_backups(ctx)
+    if all_sources:
+        backups.run_all_backups()
+    elif source not in backups.sources:
+        raise typer.BadParameter(f"unknown source: {source}", param_hint="--source")
+    else:
+        backups.sources[source].run_backups(prune=not no_prune)
+
+
+@app.command("status")
+def status_command(
+    ctx: typer.Context,
+    source: Annotated[
+        str | None,
+        typer.Option("--source", "-s", help="Status of all destinations for a source."),
+    ] = None,
+    dest: Annotated[
+        str | None,
+        typer.Option("--dest", "-d", help="Status of a single repository."),
+    ] = None,
+    pass_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--pass-file",
+            "--pass_file",
+            "-p",
+            help="Path to the repository password file.",
+        ),
+    ] = None,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+) -> None:
+    """Print status for all repositories or filter by source or destination."""
+    if source is not None and dest is not None:
+        raise typer.BadParameter(
+            "--source and --dest cannot be used together",
+            param_hint="--source/--dest",
+        )
+    if dest is not None and pass_file is None:
+        raise typer.BadParameter(
+            "--pass-file is required with --dest",
+            param_hint="--pass-file",
+        )
+
+    backups = _load_backups(ctx)
+    if source is not None:
+        get_source_status(backups, source, verbose)
+    elif dest is not None:
+        assert pass_file is not None
+        get_dest_status(backups, dest, pass_file, verbose)
+    else:
+        snapshot_ct = True if verbose else 3
+        for configured_source in backups.sources.values():
+            print(configured_source.all_repo_printouts(include_recent_snaps=snapshot_ct))
+
+
+def main() -> None:
+    """Main entry point."""
+    app()
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

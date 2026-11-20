@@ -4,12 +4,14 @@ from pathlib import Path
 from subprocess import CompletedProcess
 
 import pytest
+from typer.testing import CliRunner
 
 from ezrestic import ez
 from ezrestic import restic_types as rt
 
 default_conf = Path("test_json/backups.toml")
 demo_repo = "./.demo_repo"
+runner = CliRunner()
 
 
 @pytest.mark.parametrize(
@@ -130,3 +132,90 @@ def test_restic_call_start_failure_is_restic_error(tmp_path):
         restic._call_on_repo(repo, ["snapshots"])
 
     assert isinstance(raised.value, rt.ResticCommandError)
+
+
+def test_status_dest_requires_pass_file(tmp_path):
+    result = runner.invoke(
+        ez.app,
+        [
+            "--config-file",
+            str(tmp_path / "missing.toml"),
+            "status",
+            "--dest",
+            "some-repository",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "--pass-file" in result.output
+
+
+def test_status_source_rejects_unknown_source(tmp_path):
+    config = tmp_path / "backups.toml"
+    config.write_text(
+        'restic_pass_file = "./password"\n'
+        '[src.known]\n'
+        'source_dir = "."\n'
+        'dests = ["./repo"]\n'
+    )
+
+    result = runner.invoke(
+        ez.app,
+        ["--config-file", str(config), "status", "--source", "unknown"],
+    )
+
+    assert result.exit_code != 0
+    assert "unknown source: unknown" in result.output
+
+
+def test_status_rejects_source_and_dest_together(tmp_path):
+    result = runner.invoke(
+        ez.app,
+        [
+            "--config-file",
+            str(tmp_path / "missing.toml"),
+            "status",
+            "--source",
+            "demo",
+            "--dest",
+            "some-repository",
+            "--pass-file",
+            str(tmp_path / "password"),
+        ],
+        terminal_width=200,
+    )
+
+    assert result.exit_code != 0
+    assert "No config file found" not in result.output
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        [],
+        ["--source", "demo", "--all"],
+    ],
+)
+def test_backup_requires_source_selection_or_all(options):
+    result = runner.invoke(
+        ez.app,
+        ["--config-file", "missing.toml", "backup", *options],
+    )
+
+    assert result.exit_code != 0
+    assert "source" in result.output.lower() or "all" in result.output.lower()
+
+
+def test_backup_all_allows_no_prune():
+    result = runner.invoke(
+        ez.app,
+        [
+            "--config-file",
+            "missing.toml",
+            "backup",
+            "--all",
+            "--no-prune",
+        ],
+    )
+
+    assert "No config file found" in result.output
