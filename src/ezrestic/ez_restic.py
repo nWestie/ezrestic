@@ -5,9 +5,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import Annotated
 
-import typer
+import click
 
 import ezrestic.restic_types as rt
 
@@ -287,40 +286,33 @@ class BackupList:
             source.run_backups()
 
 
-def get_source_status(backups: BackupList, source: str, verbose: bool) -> None:
+def get_source_status(source: Source, verbose: bool) -> None:
     """Print the status of every repository configured for a source."""
-    configured_source = backups.sources.get(source)
-    if configured_source is None:
-        raise typer.BadParameter(f"unknown source: {source}", param_hint="--source")
     snapshot_ct = True if verbose else 3
-    print(configured_source.all_repo_printouts(include_recent_snaps=snapshot_ct))
+    print(source.all_repo_printouts(include_recent_snaps=snapshot_ct))
 
 
-def get_dest_status(
-    backups: BackupList, dest: str, pass_file: Path, verbose: bool
-) -> None:
+def get_dest_status(repo: Repository, verbose: bool) -> None:
     """Print the status of one repository using the supplied password file."""
     snapshot_ct = True if verbose else 3
-    repository = Repository(dest, pass_file, backups.restic_inst)
-    print(repository.repo_stats_printout(include_recent_snaps=snapshot_ct))
+    print(repo.repo_stats_printout(include_recent_snaps=snapshot_ct))
 
 
-app = typer.Typer(name="EZ-Restic", no_args_is_help=True)
-
-
-@app.callback()
-def cli(
-    ctx: typer.Context,
-    config_file: Annotated[
-        Path | None,
-        typer.Option("-c", "--config-file", help="Path to the backup configuration."),
-    ] = None,
-) -> None:
+@click.group(name="EZ-Restic", no_args_is_help=True)
+@click.option(
+    "-c",
+    "--config-file",
+    type=click.Path(path_type=Path, dir_okay=False),
+    help="Path to the backup configuration.",
+)
+@click.pass_context
+def app(ctx: click.Context, config_file: Path | None) -> None:
     """Configure and run backups with Restic."""
-    ctx.ensure_object(dict)["config_file"] = config_file
+    ctx.ensure_object(dict)
+    ctx.obj["config_file"] = config_file
 
 
-def _load_backups(ctx: typer.Context) -> BackupList:
+def _load_backups(ctx: click.Context) -> BackupList:
     config_file: Path | None = ctx.obj["config_file"]
     if config_file is None:
         config_file = Path("backups.toml")
@@ -330,99 +322,104 @@ def _load_backups(ctx: typer.Context) -> BackupList:
         backups = BackupList.from_config_file(config_file)
     except BackupList.LoadingError as e:
         eprint(e.message)
-        raise typer.Exit(1) from e
+        raise click.exceptions.Exit(1) from e
     return backups
 
 
 @app.command("backup")
+@click.option(
+    "--source",
+    "-s",
+    help="Back up only a single source from the configuration.",
+)
+@click.option(
+    "--all",
+    "-a",
+    "all_sources",
+    is_flag=True,
+    help="Back up all sources listed in the configuration.",
+)
+@click.option(
+    "--no-prune",
+    is_flag=True,
+    help="Skip the pruning stage after backup.",
+)
+@click.pass_context
 def backup_command(
-    ctx: typer.Context,
-    source: Annotated[
-        str | None,
-        typer.Option(
-            "--source",
-            "-s",
-            help="Back up only a single source from the configuration.",
-        ),
-    ] = None,
-    all_sources: Annotated[
-        bool,
-        typer.Option(
-            "--all",
-            "-a",
-            help="Back up all sources listed in the configuration.",
-        ),
-    ] = False,
-    no_prune: Annotated[
-        bool,
-        typer.Option("--no-prune", help="Skip the pruning stage after backup."),
-    ] = False,
+    ctx: click.Context,
+    source: str | None,
+    all_sources: bool,
+    no_prune: bool,
 ) -> None:
     """Run a backup."""
     if source is not None and all_sources:
-        raise typer.BadParameter(
+        raise click.UsageError(
             "--source and --all cannot be used together",
-            param_hint="--source/--all",
         )
     if source is None and not all_sources:
-        raise typer.BadParameter(
+        raise click.UsageError(
             "exactly one of --source or --all is required",
-            param_hint="--source/--all",
         )
-
     backups = _load_backups(ctx)
     if all_sources:
         backups.run_all_backups()
     elif source not in backups.sources:
-        raise typer.BadParameter(f"unknown source: {source}", param_hint="--source")
+        raise click.BadParameter(f"unknown source: {source}", param_hint="--source")
     else:
+        assert source is not None
         backups.sources[source].run_backups(prune=not no_prune)
 
 
 @app.command("status")
+@click.option(
+    "--source",
+    "-s",
+    help="Status of all destinations for a source.",
+)
+@click.option(
+    "--dest",
+    "-d",
+    help="Status of a single repository.",
+)
+@click.option(
+    "--pass-file",
+    "-p",
+    "pass_file",
+    type=click.Path(path_type=Path, dir_okay=False),
+    help="Path to the repository password file.",
+)
+@click.option("--verbose", "-v", is_flag=True)
+@click.pass_context
 def status_command(
-    ctx: typer.Context,
-    source: Annotated[
-        str | None,
-        typer.Option("--source", "-s", help="Status of all destinations for a source."),
-    ] = None,
-    dest: Annotated[
-        str | None,
-        typer.Option("--dest", "-d", help="Status of a single repository."),
-    ] = None,
-    pass_file: Annotated[
-        Path | None,
-        typer.Option(
-            "--pass-file",
-            "--pass_file",
-            "-p",
-            help="Path to the repository password file.",
-        ),
-    ] = None,
-    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+    ctx: click.Context,
+    source: str | None,
+    dest: str | None,
+    pass_file: Path | None,
+    verbose: bool,
 ) -> None:
-    """Print status for all repositories or filter by source or destination."""
+    """Print status for a configured source or a single destination."""
+    if source is None and dest is None:
+        raise click.UsageError("exactly one of --source or --dest is required")
     if source is not None and dest is not None:
-        raise typer.BadParameter(
+        raise click.UsageError(
             "--source and --dest cannot be used together",
-            param_hint="--source/--dest",
         )
     if dest is not None and pass_file is None:
-        raise typer.BadParameter(
+        raise click.UsageError(
             "--pass-file is required with --dest",
-            param_hint="--pass-file",
         )
 
     backups = _load_backups(ctx)
     if source is not None:
-        get_source_status(backups, source, verbose)
-    elif dest is not None:
-        assert pass_file is not None
-        get_dest_status(backups, dest, pass_file, verbose)
+        source_obj = backups.sources.get(source)
+        if source_obj is None:
+            raise click.BadParameter(f"unknown source: {source}", param_hint="--source")
+        get_source_status(source_obj, verbose)
     else:
-        snapshot_ct = True if verbose else 3
-        for configured_source in backups.sources.values():
-            print(configured_source.all_repo_printouts(include_recent_snaps=snapshot_ct))
+        assert dest is not None
+        assert pass_file is not None
+        repo = Repository(dest, pass_file, backups.restic_inst)
+        get_dest_status(repo, verbose)
 
 
 def main() -> None:

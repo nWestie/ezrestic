@@ -4,7 +4,7 @@ from pathlib import Path
 from subprocess import CompletedProcess
 
 import pytest
-from typer.testing import CliRunner
+from click.testing import CliRunner
 
 from ezrestic import ez
 from ezrestic import restic_types as rt
@@ -186,6 +186,17 @@ def test_status_rejects_source_and_dest_together(tmp_path):
     )
 
     assert result.exit_code != 0
+    assert "No config file found" not in result.output
+
+
+def test_status_requires_source_or_dest(tmp_path):
+    result = runner.invoke(
+        ez.app,
+        ["--config-file", str(tmp_path / "missing.toml"), "status"],
+    )
+
+    assert result.exit_code != 0
+    assert "exactly one of --source or --dest is required" in result.output
     assert "No config file found" not in result.output
 
 
